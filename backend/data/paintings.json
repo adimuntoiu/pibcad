@@ -1,0 +1,33 @@
+[
+  {
+    "id": "starry-night",
+    "title": "The Starry Night",
+    "artist": "Vincent van Gogh",
+    "image": "starry_night.jpg",
+    "images": ["starry_night.jpg"]
+  },
+  {
+    "id": "mona-lisa",
+    "title": "Mona Lisa",
+    "artist": "Leonardo da Vinci",
+    "image": "mona_lisa.jpg"
+  },
+  {
+    "id": "girl-pearl-earring",
+    "title": "Girl with a Pearl Earring",
+    "artist": "Johannes Vermeer",
+    "image": "girl_with_pearl_earring.jpg"
+  },
+  {
+    "id": "the-scream",
+    "title": "The Scream",
+    "artist": "Edvard Munch",
+    "image": "the_scream.jpg"
+  },
+  {
+    "id": "great-wave",
+    "title": "The Great Wave off Kanagawa",
+    "artist": "Hokusai",
+    "image": "great_wave.jpg"
+  }
+]
