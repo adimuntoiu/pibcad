@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Printable & Interactive AR Target Sheet — Pair 01 (Equinox)</title>
+		<style>
+			:root {
+				color-scheme: dark;
+			}
+			body {
+				margin: 0;
+				padding: 24px;
+				font-family: system-ui, -apple-system, sans-serif;
+				background: #09090b;
+				color: #fafafa;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				min-height: 100vh;
+			}
+			header {
+				max-width: 920px;
+				text-align: center;
+				margin-bottom: 24px;
+			}
+			h1 {
+				margin: 0 0 8px 0;
+				font-size: 1.5rem;
+			}
+			p {
+				margin: 0;
+				color: #a1a1aa;
+				font-size: 0.92rem;
+				line-height: 1.5;
+			}
+			.toolbar {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 10px;
+				justify-content: center;
+				margin-top: 16px;
+			}
+			button {
+				background: #27272a;
+				color: #fff;
+				border: 1px solid #3f3f46;
+				border-radius: 10px;
+				padding: 8px 14px;
+				font-size: 0.85rem;
+				font-weight: 600;
+				cursor: pointer;
+			}
+			button:hover {
+				background: #3f3f46;
+			}
+			button.preset {
+				background: #064e3b;
+				border-color: #10b981;
+			}
+			.pair-stage {
+				display: flex;
+				gap: 24px;
+				flex-wrap: wrap;
+				justify-content: center;
+				align-items: center;
+				padding: 28px;
+				background: #ffffff;
+				border-radius: 20px;
+				box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+			}
+			.canvas-card {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				color: #18181b;
+			}
+			.fiducial-frame {
+				width: min(38vw, 340px);
+				height: min(38vw, 340px);
+				border: 10px solid #09090b;
+				box-sizing: border-box;
+				transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+				cursor: pointer;
+				background: #000;
+			}
+			.fiducial-frame img {
+				width: 100%;
+				height: 100%;
+				display: block;
+			}
+			.meta {
+				margin-top: 12px;
+				font-size: 0.85rem;
+				font-weight: 700;
+			}
+			@media print {
+				body {
+					background: #fff;
+					color: #000;
+					padding: 0;
+				}
+				.toolbar,
+				header p {
+					display: none;
+				}
+				.pair-stage {
+					box-shadow: none;
+					padding: 12px;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>Pair 01: Equinox I &amp; II — Printable / Second-Screen AR Targets</h1>
+			<p>
+				Print this page or open it on a phone/tablet/second monitor and point the scanner camera at the
+				two square canvases. Click either canvas below to rotate it in 90° steps, or select one of the
+				4 valid seam arrangements (<strong>AA, BB, CC, DD</strong>).
+			</p>
+			<div class="toolbar">
+				<button class="preset" onclick="setRotations(90, 270)">Valid Seam AA (90° / 270°)</button>
+				<button class="preset" onclick="setRotations(0, 180)">Valid Seam BB (0° / 180°)</button>
+				<button class="preset" onclick="setRotations(180, 0)">Valid Seam CC (180° / 0°)</button>
+				<button class="preset" onclick="setRotations(270, 90)">Valid Seam DD (270° / 90°)</button>
+				<button onclick="setRotations(0, 0)">Non-Matching BC (0° / 0°)</button>
+				<button onclick="window.print()">Print Target Sheet</button>
+			</div>
+		</header>
+
+		<div class="pair-stage">
+			<div class="canvas-card">
+				<div id="canvasA" class="fiducial-frame" onclick="rotateCanvas('A')">
+					<img src="/demo-targets/painting-a.svg" alt="Painting A — Equinox I" />
+				</div>
+				<div class="meta" id="labelA">Painting A (Equinox I) — Rotation: 0°</div>
+			</div>
+
+			<div class="canvas-card">
+				<div id="canvasB" class="fiducial-frame" onclick="rotateCanvas('B')">
+					<img src="/demo-targets/painting-b.svg" alt="Painting B — Equinox II" />
+				</div>
+				<div class="meta" id="labelB">Painting B (Equinox II) — Rotation: 180°</div>
+			</div>
+		</div>
+
+		<script>
+			let rotA = 0;
+			let rotB = 180;
+
+			function updateDOM() {
+				document.getElementById('canvasA').style.transform = `rotate(${rotA}deg)`;
+				document.getElementById('canvasB').style.transform = `rotate(${rotB}deg)`;
+				document.getElementById('labelA').textContent =
+					`Painting A (Equinox I) — Rotation: ${rotA}° (Click to rotate +90°)`;
+				document.getElementById('labelB').textContent =
+					`Painting B (Equinox II) — Rotation: ${rotB}° (Click to rotate +90°)`;
+			}
+
+			function rotateCanvas(which) {
+				if (which === 'A') rotA = (rotA + 90) % 360;
+				else rotB = (rotB + 90) % 360;
+				updateDOM();
+			}
+
+			function setRotations(a, b) {
+				rotA = a;
+				rotB = b;
+				updateDOM();
+			}
+
+			updateDOM();
+		</script>
+	</body>
+</html>

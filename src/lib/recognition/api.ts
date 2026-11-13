@@ -1,4 +1,4 @@
-import type { PaintingDetails, RecognitionResponse } from '#lib/types';
+import type { RecognitionResponse } from '#lib/types';
 
 export class BackendUnreachableError extends Error {
 	constructor(message = 'Cannot reach recognition backend.') {
@@ -28,7 +28,12 @@ export async function recognizeFrame(
 		throw new BackendUnreachableError();
 	}
 
-	if (response.status >= 500 || response.status === 502 || response.status === 503 || response.status === 504) {
+	if (
+		response.status >= 500 ||
+		response.status === 502 ||
+		response.status === 503 ||
+		response.status === 504
+	) {
 		throw new BackendUnreachableError('Server error (' + response.status + ')');
 	}
 
@@ -37,14 +42,4 @@ export async function recognizeFrame(
 	}
 
 	return (await response.json()) as RecognitionResponse;
-}
-
-export async function fetchPaintingDetails(id: string): Promise<PaintingDetails | null> {
-	try {
-		const res = await fetch('/api/paintings/' + encodeURIComponent(id));
-		if (!res.ok) return null;
-		return (await res.json()) as PaintingDetails;
-	} catch {
-		return null;
-	}
 }

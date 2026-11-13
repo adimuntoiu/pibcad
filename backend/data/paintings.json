@@ -1,33 +1,42 @@
 [
-  {
-    "id": "starry-night",
-    "title": "The Starry Night",
-    "artist": "Vincent van Gogh",
-    "image": "starry_night.jpg",
-    "images": ["starry_night.jpg"]
-  },
-  {
-    "id": "mona-lisa",
-    "title": "Mona Lisa",
-    "artist": "Leonardo da Vinci",
-    "image": "mona_lisa.jpg"
-  },
-  {
-    "id": "girl-pearl-earring",
-    "title": "Girl with a Pearl Earring",
-    "artist": "Johannes Vermeer",
-    "image": "girl_with_pearl_earring.jpg"
-  },
-  {
-    "id": "the-scream",
-    "title": "The Scream",
-    "artist": "Edvard Munch",
-    "image": "the_scream.jpg"
-  },
-  {
-    "id": "great-wave",
-    "title": "The Great Wave off Kanagawa",
-    "artist": "Hokusai",
-    "image": "great_wave.jpg"
-  }
+	{
+		"id": "painting-a-solar",
+		"pair_id": "pair-01-equinox",
+		"slot": "A",
+		"title": "Equinox I — Solar Ember",
+		"artist": "Mircea Popescu",
+		"image": "painting_a_solar.png",
+		"edges_0": {
+			"top": "A",
+			"right": "B",
+			"left": "C",
+			"bottom": "D"
+		},
+		"orientation_photos": {
+			"0": [],
+			"90": [],
+			"180": [],
+			"270": []
+		}
+	},
+	{
+		"id": "painting-b-lunar",
+		"pair_id": "pair-01-equinox",
+		"slot": "B",
+		"title": "Equinox II — Astral Tide",
+		"artist": "Mircea Popescu",
+		"image": "painting_b_lunar.png",
+		"edges_0": {
+			"top": "A",
+			"right": "B",
+			"left": "C",
+			"bottom": "D"
+		},
+		"orientation_photos": {
+			"0": [],
+			"90": [],
+			"180": [],
+			"270": []
+		}
+	}
 ]

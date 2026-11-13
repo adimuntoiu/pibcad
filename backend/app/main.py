@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Painting Recognition API", lifespan=lifespan)
+app = FastAPI(title="Paired Canvas AR Recognition API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,11 +38,18 @@ app.mount("/api/images", StaticFiles(directory=paintings_dir), name="images")
 async def health():
     return {
         "status": "ok",
-        "indexed_embeddings": len(recognizer.embedding_ids),
+        "backbone": recognizer.encoder.active_backbone,
+        "indexed_embeddings": len(recognizer.entries),
         "paintings_count": len(recognizer.paintings),
         "threshold": settings.similarity_threshold,
         "margin": settings.similarity_margin,
     }
+
+
+@app.post("/api/reload")
+async def reload_index():
+    info = recognizer.reload()
+    return {"status": "reloaded", **info}
 
 
 @app.get("/api/paintings/{painting_id}")
@@ -52,7 +59,7 @@ async def get_painting(painting_id: str):
         raise HTTPException(status_code=404, detail="Painting not found")
     return {
         **painting,
-        "imageUrl": "/api/images/" + painting['image'] if "image" in painting else None,
+        "imageUrl": "/api/images/" + painting["image"] if "image" in painting else None,
     }
 
 

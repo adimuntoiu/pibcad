@@ -4,8 +4,12 @@
 	"private": true,
 	"type": "module",
 	"imports": {
-		"#lib": "./src/lib/index.js",
-		"#lib/*": "./src/lib/*"
+		"#lib": "./src/lib/index.ts",
+		"#lib/*": [
+			"./src/lib/*",
+			"./src/lib/*.ts",
+			"./src/lib/*.svelte.ts"
+		]
 	},
 	"scripts": {
 		"dev": "vite dev",
@@ -23,5 +27,12 @@
 		"svelte-check": "^4.6.0",
 		"typescript": "^6.0.3",
 		"vite": "^8.3.0"
+	},
+	"dependencies": {
+		"@supabase/supabase-js": "^2.119.0",
+		"@tailwindcss/vite": "^4.3.5",
+		"@types/three": "^0.187.0",
+		"tailwindcss": "^4.3.5",
+		"three": "^0.187.0"
 	}
 }
