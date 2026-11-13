@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { generate3D } from '$lib/services/generate3d';
-	import type { RecognizedPainting } from '$lib/state/scanner.svelte';
+	import { generate3D } from '#lib/services/generate3d';
+	import type { RecognizedPainting } from '#lib/state/scanner.svelte';
 
 	interface Props {
 		painting: RecognizedPainting | null;

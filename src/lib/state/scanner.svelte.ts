@@ -1,6 +1,6 @@
-import { BackendUnreachableError, recognizeFrame } from '$lib/api/recognize';
-import { CameraSetupError, FrameCapturer, startRearCamera, stopCameraStream } from '$lib/camera/camera';
-import type { RecognitionResponse, ScannerStatus } from '$lib/types';
+import { BackendUnreachableError, recognizeFrame } from '#lib/api/recognize';
+import { CameraSetupError, FrameCapturer, startRearCamera, stopCameraStream } from '#lib/camera/camera';
+import type { RecognitionResponse, ScannerStatus } from '#lib/types';
 
 const CAPTURE_INTERVAL_MS = 500;
 const REQUIRED_CONSECUTIVE_MATCHES = 3;

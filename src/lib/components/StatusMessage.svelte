@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ScannerStatus } from '$lib/types';
+	import type { ScannerStatus } from '#lib/types';
 
 	interface Props {
 		status: ScannerStatus;

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import CameraView from '$lib/components/CameraView.svelte';
-	import ResultSheet from '$lib/components/ResultSheet.svelte';
-	import StatusMessage from '$lib/components/StatusMessage.svelte';
-	import { ScannerController } from '$lib/state/scanner.svelte';
+	import CameraView from '#lib/components/CameraView.svelte';
+	import ResultSheet from '#lib/components/ResultSheet.svelte';
+	import StatusMessage from '#lib/components/StatusMessage.svelte';
+	import { ScannerController } from '#lib/state/scanner.svelte';
 
 	const scanner = new ScannerController();
 	let videoElement = $state<HTMLVideoElement | null>(null);

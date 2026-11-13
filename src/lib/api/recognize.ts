@@ -1,4 +1,4 @@
-import type { PaintingDetails, RecognitionResponse } from '$lib/types';
+import type { PaintingDetails, RecognitionResponse } from '#lib/types';
 
 export class BackendUnreachableError extends Error {
 	constructor(message = 'Cannot reach recognition backend.') {
