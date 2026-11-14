@@ -8,6 +8,8 @@ export interface DetectionResponse {
 	artist: string | null;
 	corners: [number, number][] | null;
 	inliers: number;
+	model_url?: string | null;
+	model_path?: string | null;
 }
 
 export type ScannerStatus =

@@ -1,5 +1,8 @@
 import json
 import logging
+import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Any
 
 import cv2
@@ -8,6 +11,82 @@ import numpy as np
 from .config import settings
 
 logger = logging.getLogger("painting_detector")
+
+
+def _supabase_get(path: str) -> bytes:
+    base = settings.supabase_url.strip().rstrip("/")
+    key = settings.supabase_service_key.strip()
+    headers = {"apikey": key}
+    # New `sb_secret_...`/`sb_publishable_...` keys are not JWTs and must only be sent
+    # as `apikey`; legacy JWT keys are also sent as a Bearer token.
+    if not key.startswith("sb_"):
+        headers["Authorization"] = f"Bearer {key}"
+    req = urllib.request.Request(f"{base}{path}", headers=headers)
+    with urllib.request.urlopen(req, timeout=settings.supabase_timeout_s) as resp:
+        return resp.read()
+
+
+def _load_catalog_supabase() -> list[tuple[dict[str, Any], np.ndarray]]:
+    """Fetch painting rows from the Supabase table and download each image from storage."""
+    table = urllib.parse.quote(settings.supabase_table)
+    rows = json.loads(
+        _supabase_get(f"/rest/v1/{table}?select=id,title,artist,image_path&order=id")
+    )
+    bucket = urllib.parse.quote(settings.supabase_bucket)
+    out: list[tuple[dict[str, Any], np.ndarray]] = []
+    for row in rows:
+        image_path = str(row.get("image_path") or "").lstrip("/")
+        if not row.get("id") or not image_path:
+            logger.warning("Skipping Supabase row with missing id/image_path: %s", row)
+            continue
+        try:
+            data = _supabase_get(
+                f"/storage/v1/object/{bucket}/{urllib.parse.quote(image_path)}"
+            )
+        except urllib.error.HTTPError as e:
+            logger.warning("Image %s not found in bucket (HTTP %s)", image_path, e.code)
+            continue
+        bgr = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        if bgr is None:
+            logger.warning("Could not decode image %s", image_path)
+            continue
+        item = {
+            "id": row["id"],
+            "title": row.get("title") or "",
+            "artist": row.get("artist") or "",
+            "model_path": row.get("model_path") or row.get("model") or "",
+        }
+        out.append((item, bgr))
+    if not out:
+        raise RuntimeError("Supabase returned no usable paintings")
+    return out
+
+
+def _load_catalog_local() -> list[tuple[dict[str, Any], np.ndarray]]:
+    with open(settings.data_dir / "paintings.json", "r", encoding="utf-8") as f:
+        items = json.load(f)
+    out: list[tuple[dict[str, Any], np.ndarray]] = []
+    for item in items:
+        path = settings.data_dir / "paintings" / item["image"]
+        bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
+        if bgr is None:
+            logger.warning("Reference image missing: %s", path)
+            continue
+        item_data = dict(item)
+        if "model_path" not in item_data and "model" in item_data:
+            item_data["model_path"] = item_data["model"]
+        out.append((item_data, bgr))
+    return out
+
+
+def _load_catalog() -> tuple[str, list[tuple[dict[str, Any], np.ndarray]]]:
+    """Supabase when configured, local files otherwise (and as fallback on any error)."""
+    if settings.supabase_enabled:
+        try:
+            return "supabase", _load_catalog_supabase()
+        except Exception as e:  # network/auth/schema errors -> keep the app working
+            logger.error("Supabase load failed (%s); falling back to local catalog", e)
+    return "local", _load_catalog_local()
 
 
 def _resize_long_side(img: np.ndarray, max_side: int) -> tuple[np.ndarray, float]:
@@ -432,21 +511,16 @@ class PaintingDetector:
     def __init__(self) -> None:
         self.sift_frame = cv2.SIFT_create(nfeatures=650, contrastThreshold=0.026, edgeThreshold=12)
         self.refs: list[dict[str, Any]] = []
+        self.source = "none"
 
     def load(self) -> None:
-        self.refs = []
-        catalog = settings.data_dir / "paintings.json"
-        with open(catalog, "r", encoding="utf-8") as f:
-            items = json.load(f)
+        source, catalog = _load_catalog()
+        refs: list[dict[str, Any]] = []
+        self.source = source
 
-        for item in items:
-            path = settings.data_dir / "paintings" / item["image"]
-            bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
-            if bgr is None:
-                logger.warning("Reference image missing: %s", path)
-                continue
+        for item, bgr in catalog:
             bgr, _ = _resize_long_side(bgr, 480)
-            gray = cv2.cvtColor(bgr, cv2.IMREAD_GRAYSCALE)
+            gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
 
             pts_asift, des_asift = _build_asift_bank(gray)
 
@@ -464,11 +538,12 @@ class PaintingDetector:
                     hp_templates.append(hv)
 
             h, w = bgr.shape[:2]
-            self.refs.append(
+            refs.append(
                 {
                     "id": item["id"],
                     "title": item["title"],
                     "artist": item["artist"],
+                    "model_path": item.get("model_path") or item.get("model") or "",
                     "width": w,
                     "height": h,
                     "is_chromatic": is_chromatic,
@@ -486,6 +561,9 @@ class PaintingDetector:
                 is_chromatic,
                 len(pts_asift),
             )
+
+        self.refs = refs
+        logger.info("Loaded %d paintings from %s", len(refs), source)
 
     def _score_quad(
         self, bgr: np.ndarray, quad: np.ndarray, require_hp: bool = True
@@ -563,12 +641,13 @@ class PaintingDetector:
                 best_ref = ref_after
                 best_quad = refined_quad
             else:
-                # Also check if the unrefined quad itself passes the strict require_hp=True check
+                # Raw unrefined quad fallback requires higher confidence (>= 0.58) so
+                # outer containers/white card margins aren't falsely reported as corners
                 ref_raw, score_raw = self._score_quad(bgr, quad, require_hp=True)
-                if ref_raw is not None and score_raw > best_score:
+                if ref_raw is not None and score_raw >= 0.58 and score_raw > best_score:
                     best_score = score_raw
                     best_ref = ref_raw
-                    best_quad = refined_quad
+                    best_quad = quad
 
         if best_ref is not None and best_quad is not None and best_score >= 0.46:
             return best_ref, int(round(best_score * 50)), best_score, best_quad
@@ -648,25 +727,9 @@ class PaintingDetector:
         if bgr_raw is None:
             return miss
 
-        # 1. Fast quad + dual-template path on 360px frame
-        bgr_360, _ = _resize_long_side(bgr_raw, 360)
-        fh360, fw360 = bgr_360.shape[:2]
-        quad_hit = self._match_quads(bgr_360)
-
-        if quad_hit is not None and quad_hit[2] >= 0.52:
-            ref, inliers, score, corners = quad_hit
-            return {
-                "match": True,
-                "painting_id": ref["id"],
-                "title": ref["title"],
-                "artist": ref["artist"],
-                "corners": [
-                    [round(float(x) / fw360, 4), round(float(y) / fh360, 4)] for x, y in corners
-                ],
-                "inliers": inliers,
-            }
-
-        # 2. Multi-Scale ASIFT + RootSIFT + USAC_MAGSAC homography path (288px -> 576px Octave -1)
+        # 1. Multi-Scale ASIFT + RootSIFT + USAC_MAGSAC homography path
+        # Prioritized first: provides mathematically exact painting corners directly from the
+        # artwork's reference geometry, completely immune to white card margins or phone screen bezels.
         bgr_sift, _ = _resize_long_side(bgr_raw, 288)
         fhs, fws = bgr_sift.shape[:2]
         gray_sift = cv2.cvtColor(bgr_sift, cv2.COLOR_BGR2GRAY)
@@ -680,26 +743,34 @@ class PaintingDetector:
                 if result and (best is None or result[0] > best[1][0]):
                     best = (ref, result)
 
-            if best is not None and best[1][0] >= 9:
+            if best is not None and best[1][0] >= 8:
                 ref, (inliers, corners) = best
                 return {
                     "match": True,
                     "painting_id": ref["id"],
                     "title": ref["title"],
                     "artist": ref["artist"],
+                    "model_path": ref.get("model_path") or f"/models/{ref['id']}.obj",
                     "corners": [
                         [round(float(x) / fws, 4), round(float(y) / fhs, 4)] for x, y in corners
                     ],
                     "inliers": inliers,
                 }
 
-        if quad_hit is not None:
+        # 2. Secondary fallback: Fast quad + dual-template path on 360px frame
+        # Only reached when SIFT keypoints are insufficient (e.g. distant view or motion blur)
+        bgr_360, _ = _resize_long_side(bgr_raw, 360)
+        fh360, fw360 = bgr_360.shape[:2]
+        quad_hit = self._match_quads(bgr_360)
+
+        if quad_hit is not None and quad_hit[2] >= 0.52:
             ref, inliers, score, corners = quad_hit
             return {
                 "match": True,
                 "painting_id": ref["id"],
                 "title": ref["title"],
                 "artist": ref["artist"],
+                "model_path": ref.get("model_path") or f"/models/{ref['id']}.obj",
                 "corners": [
                     [round(float(x) / fw360, 4), round(float(y) / fh360, 4)] for x, y in corners
                 ],

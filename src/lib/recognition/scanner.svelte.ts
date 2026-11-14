@@ -43,6 +43,8 @@ export class PaintingScanner {
 	corners = $state<Point[] | null>(null);
 	title = $state<string | null>(null);
 	artist = $state<string | null>(null);
+	paintingId = $state<string | null>(null);
+	modelUrl = $state<string | null>(null);
 
 	private videoEl: HTMLVideoElement | null = null;
 	private stream: MediaStream | null = null;
@@ -85,6 +87,8 @@ export class PaintingScanner {
 		this.corners = null;
 		this.title = null;
 		this.artist = null;
+		this.paintingId = null;
+		this.modelUrl = null;
 		this.status = 'idle';
 	}
 
@@ -139,6 +143,8 @@ export class PaintingScanner {
 			}
 			this.title = result.title;
 			this.artist = result.artist;
+			this.paintingId = result.painting_id;
+			this.modelUrl = result.model_url ?? null;
 			this.lastSeenAt = now;
 			this.status = 'detected';
 			return;
@@ -148,6 +154,8 @@ export class PaintingScanner {
 			this.corners = null;
 			this.title = null;
 			this.artist = null;
+			this.paintingId = null;
+			this.modelUrl = null;
 		}
 		if (!this.corners) this.status = 'scanning';
 	}

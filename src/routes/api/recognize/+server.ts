@@ -15,14 +15,17 @@ interface ChildProcessHandle {
 	off(event: 'error', listener: (err: Error) => void): void;
 }
 
-// Warm Python OpenCV bridge (v4: 4 paintings indexed, auto-reloads on recognizer.py or paintings.json change)
+// Warm Python OpenCV bridge (v5: loads paintings from Supabase when configured in backend/.env,
+// falls back to local files; hot-reloads when recognizer.py, config.py, .env or paintings.json change)
 const WORKER_SCRIPT = `
 import sys, os, struct, json, importlib
 sys.path.insert(0, 'backend')
+import app.config as cfg_mod
 import app.recognizer as rec_mod
 rec_mod.detector.load()
+WATCHED = ['backend/app/recognizer.py', 'backend/app/config.py', 'backend/.env', 'backend/data/paintings.json']
 def get_sig():
-    return (os.path.getmtime('backend/app/recognizer.py'), os.path.getmtime('backend/data/paintings.json'))
+    return tuple(os.path.getmtime(p) if os.path.exists(p) else 0.0 for p in WATCHED)
 last_sig = get_sig()
 sys.stdout.buffer.write(b'READY\\n')
 sys.stdout.buffer.flush()
@@ -42,10 +45,11 @@ while True:
         sig = get_sig()
         if sig != last_sig:
             last_sig = sig
+            cfg_mod = importlib.reload(cfg_mod)
             rec_mod = importlib.reload(rec_mod)
             rec_mod.detector.load()
-    except Exception:
-        pass
+    except Exception as e:
+        sys.stderr.write('detector reload failed: %r\\n' % (e,))
     res = rec_mod.detector.detect(data)
     out = json.dumps(res).encode('utf-8')
     sys.stdout.buffer.write(struct.pack('>I', len(out)) + out)

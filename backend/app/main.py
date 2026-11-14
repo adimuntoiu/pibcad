@@ -34,6 +34,7 @@ def health():
     return {
         "status": "ok",
         "paintings": [r["id"] for r in detector.refs],
+        "source": detector.source,
         "min_inliers": settings.min_inliers,
     }
 
