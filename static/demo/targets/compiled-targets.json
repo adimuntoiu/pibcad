@@ -1,0 +1,118 @@
+{
+  "compiledAt": "2026-11-14T16:20:51.370Z",
+  "engine": "asift-rootsift-homography-v1",
+  "rotationStepsDeg": [
+    0,
+    90,
+    180,
+    270
+  ],
+  "targets": [
+    {
+      "id": "irlo1",
+      "name": "Irlo I — Stone Guardian",
+      "aliases": [
+        "painting-c-monolith-i",
+        "painting-a-solar"
+      ],
+      "imageTargetUrl": "/demo/irlo1.jpg",
+      "verified": true,
+      "fileSizeBytes": 43668,
+      "rotations": [
+        {
+          "targetKey": "irlo1_rot0",
+          "rotationDeg": 0,
+          "edges": {
+            "top": "A",
+            "right": "B",
+            "bottom": "D",
+            "left": "C"
+          }
+        },
+        {
+          "targetKey": "irlo1_rot90",
+          "rotationDeg": 90,
+          "edges": {
+            "top": "C",
+            "right": "A",
+            "bottom": "B",
+            "left": "D"
+          }
+        },
+        {
+          "targetKey": "irlo1_rot180",
+          "rotationDeg": 180,
+          "edges": {
+            "top": "D",
+            "right": "C",
+            "bottom": "A",
+            "left": "B"
+          }
+        },
+        {
+          "targetKey": "irlo1_rot270",
+          "rotationDeg": 270,
+          "edges": {
+            "top": "B",
+            "right": "D",
+            "bottom": "C",
+            "left": "A"
+          }
+        }
+      ]
+    },
+    {
+      "id": "irlo2",
+      "name": "Irlo II — Inverted Horizon",
+      "aliases": [
+        "painting-d-monolith-ii",
+        "painting-b-lunar"
+      ],
+      "imageTargetUrl": "/demo/irlo2.jpg",
+      "verified": true,
+      "fileSizeBytes": 49775,
+      "rotations": [
+        {
+          "targetKey": "irlo2_rot0",
+          "rotationDeg": 0,
+          "edges": {
+            "top": "A",
+            "right": "B",
+            "bottom": "D",
+            "left": "C"
+          }
+        },
+        {
+          "targetKey": "irlo2_rot90",
+          "rotationDeg": 90,
+          "edges": {
+            "top": "C",
+            "right": "A",
+            "bottom": "B",
+            "left": "D"
+          }
+        },
+        {
+          "targetKey": "irlo2_rot180",
+          "rotationDeg": 180,
+          "edges": {
+            "top": "D",
+            "right": "C",
+            "bottom": "A",
+            "left": "B"
+          }
+        },
+        {
+          "targetKey": "irlo2_rot270",
+          "rotationDeg": 270,
+          "edges": {
+            "top": "B",
+            "right": "D",
+            "bottom": "C",
+            "left": "A"
+          }
+        }
+      ]
+    }
+  ]
+}

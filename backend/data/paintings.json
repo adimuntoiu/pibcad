@@ -1,33 +1,30 @@
 [
   {
-    "id": "starry-night",
-    "title": "The Starry Night",
-    "artist": "Vincent van Gogh",
-    "image": "starry_night.jpg",
-    "images": ["starry_night.jpg"]
+    "id": "irlo1",
+    "title": "Irlo I — Stone Guardian",
+    "artist": "IRLO",
+    "image": "irlo1.jpg",
+    "model_path": "/demo/models/irlo1_single.glb"
   },
   {
-    "id": "mona-lisa",
-    "title": "Mona Lisa",
-    "artist": "Leonardo da Vinci",
-    "image": "mona_lisa.jpg"
+    "id": "irlo2",
+    "title": "Irlo II — Inverted Horizon",
+    "artist": "IRLO",
+    "image": "irlo2.jpg",
+    "model_path": "/demo/models/irlo2_single.glb"
   },
   {
-    "id": "girl-pearl-earring",
-    "title": "Girl with a Pearl Earring",
-    "artist": "Johannes Vermeer",
-    "image": "girl_with_pearl_earring.jpg"
+    "id": "painting-a-solar",
+    "title": "Equinox I — Solar Ember",
+    "artist": "Mircea Popescu",
+    "image": "painting_a_solar.png",
+    "model_path": "/demo/models/irlo1_single.glb"
   },
   {
-    "id": "the-scream",
-    "title": "The Scream",
-    "artist": "Edvard Munch",
-    "image": "the_scream.jpg"
-  },
-  {
-    "id": "great-wave",
-    "title": "The Great Wave off Kanagawa",
-    "artist": "Hokusai",
-    "image": "great_wave.jpg"
+    "id": "painting-b-lunar",
+    "title": "Equinox II — Astral Tide",
+    "artist": "Mircea Popescu",
+    "image": "painting_b_lunar.png",
+    "model_path": "/demo/models/irlo2_single.glb"
   }
 ]

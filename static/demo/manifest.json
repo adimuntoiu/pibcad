@@ -1,0 +1,149 @@
+{
+  "version": "1.0.0",
+  "artist": "IRLO",
+  "tolerances": {
+    "maxGapRatio": 0.2,
+    "maxLateralOffsetRatio": 0.35,
+    "maxNormalAngleDeg": 20
+  },
+  "animation": {
+    "loadingDurationMs": 1200,
+    "stateDebounceFrames": 5,
+    "dropHoldMs": 500,
+    "crossFadeDurationMs": 400
+  },
+  "canvases": [
+    {
+      "id": "irlo1",
+      "name": "Irlo I — Stone Guardian",
+      "aliases": ["painting-c-monolith-i", "painting-a-solar"],
+      "imageTargetUrl": "/demo/irlo1.jpg",
+      "edges": {
+        "top": "A",
+        "right": "B",
+        "left": "C",
+        "bottom": "D"
+      },
+      "singleModel": {
+        "url": "/demo/models/irlo1_single.glb",
+        "mode": "overlay",
+        "scale": 1.0,
+        "fitDimension": "width",
+        "fitFraction": 1.0,
+        "offset": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "axisConvention": "yUp",
+        "flip": [false, false, false],
+        "pivot": "front",
+        "depthScale": 1.0
+      }
+    },
+    {
+      "id": "irlo2",
+      "name": "Irlo II — Inverted Horizon",
+      "aliases": ["painting-d-monolith-ii", "painting-b-lunar"],
+      "imageTargetUrl": "/demo/irlo2.jpg",
+      "edges": {
+        "top": "A",
+        "right": "C",
+        "bottom": "B",
+        "left": "D"
+      },
+      "singleModel": {
+        "url": "/demo/models/irlo2_single.glb",
+        "mode": "overlay",
+        "scale": 1.0,
+        "fitDimension": "width",
+        "fitFraction": 1.0,
+        "offset": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "axisConvention": "yUp",
+        "flip": [false, false, false],
+        "pivot": "front",
+        "depthScale": 1.0
+      }
+    }
+  ],
+  "seamRules": [
+    {
+      "id": "seam-AA",
+      "canvasAId": "irlo1",
+      "canvasBId": "irlo2",
+      "edgeA": "A",
+      "edgeB": "A",
+      "combinedModel": {
+        "url": "/demo/models/combined_AA.glb",
+        "mode": "overlay",
+        "scale": 1.0,
+        "fitDimension": "width",
+        "fitFraction": 1.0,
+        "offset": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "axisConvention": "yUp",
+        "flip": [false, false, false],
+        "pivot": "front",
+        "depthScale": 1.0
+      }
+    },
+    {
+      "id": "seam-BB",
+      "canvasAId": "irlo1",
+      "canvasBId": "irlo2",
+      "edgeA": "B",
+      "edgeB": "B",
+      "combinedModel": {
+        "url": "/demo/models/combined_BB.glb",
+        "mode": "overlay",
+        "scale": 1.0,
+        "fitDimension": "width",
+        "fitFraction": 1.0,
+        "offset": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "axisConvention": "yUp",
+        "flip": [false, false, false],
+        "pivot": "front",
+        "depthScale": 1.0
+      }
+    },
+    {
+      "id": "seam-CC",
+      "canvasAId": "irlo1",
+      "canvasBId": "irlo2",
+      "edgeA": "C",
+      "edgeB": "C",
+      "combinedModel": {
+        "url": "/demo/models/combined_CC.glb",
+        "mode": "overlay",
+        "scale": 1.0,
+        "fitDimension": "width",
+        "fitFraction": 1.0,
+        "offset": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "axisConvention": "yUp",
+        "flip": [false, false, false],
+        "pivot": "front",
+        "depthScale": 1.0
+      }
+    },
+    {
+      "id": "seam-DD",
+      "canvasAId": "irlo1",
+      "canvasBId": "irlo2",
+      "edgeA": "D",
+      "edgeB": "D",
+      "combinedModel": {
+        "url": "/demo/models/combined_DD.glb",
+        "mode": "overlay",
+        "scale": 1.0,
+        "fitDimension": "width",
+        "fitFraction": 1.0,
+        "offset": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "axisConvention": "yUp",
+        "flip": [false, false, false],
+        "pivot": "front",
+        "depthScale": 1.0
+      }
+    }
+  ]
+}

@@ -1,16 +1,17 @@
+import adapter from '@sveltejs/adapter-auto';
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [sveltekit()],
+	plugins: [
+		tailwindcss(),
+		sveltekit({
+			adapter: adapter()
+		})
+	],
 	server: {
 		host: true,
-		allowedHosts: true,
-		proxy: {
-			'/api': {
-				target: 'http://127.0.0.1:8000',
-				changeOrigin: true
-			}
-		}
+		allowedHosts: true
 	}
 });

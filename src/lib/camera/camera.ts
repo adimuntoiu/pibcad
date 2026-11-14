@@ -30,6 +30,7 @@ export async function startRearCamera(videoEl: HTMLVideoElement): Promise<MediaS
 
 		videoEl.srcObject = stream;
 		videoEl.setAttribute('playsinline', 'true');
+		videoEl.setAttribute('webkit-playsinline', 'true');
 		videoEl.muted = true;
 
 		await videoEl.play();
