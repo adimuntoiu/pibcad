@@ -1,6 +1,8 @@
 <script module lang="ts">
 	import type { ModelBoundsReport } from './modelNormalization';
 
+	export type CalibrationGestureMode = 'rotate' | 'roll' | 'move';
+
 	export interface PlaneMeasurement {
 		id: string;
 		avgWidthPx: number;
@@ -78,11 +80,13 @@
 		calibrationSpec?: ModelSpec | null;
 		calibrationWireframe?: boolean;
 		calibrationOpacity?: number;
+		calibrationGestureMode?: CalibrationGestureMode;
 		onFpsUpdate?: (fps: number) => void;
 		onFrameTick?: (nowMs: number) => void;
 		onDiagnosticsUpdate?: (diag: ARDiagnostics) => void;
 		onCalibrationDrag?: (dxLocal: number, dyLocal: number) => void;
 		onCalibrationScale?: (scaleFactor: number) => void;
+		onCalibrationRotate?: (dPitchDeg: number, dYawDeg: number, dRollDeg: number) => void;
 	}
 
 	let {
@@ -105,11 +109,13 @@
 		calibrationSpec = null,
 		calibrationWireframe = false,
 		calibrationOpacity = 1,
+		calibrationGestureMode = 'rotate',
 		onFpsUpdate,
 		onFrameTick,
 		onDiagnosticsUpdate,
 		onCalibrationDrag,
-		onCalibrationScale
+		onCalibrationScale,
+		onCalibrationRotate
 	}: Props = $props();
 
 	let canvas: HTMLCanvasElement;
@@ -665,14 +671,28 @@
 		}
 	}
 
-	// Pointer gestures in Calibration Mode (1-finger XY drag, 2-finger pinch uniform scale)
+	// Pointer gestures in Calibration Mode (3D tumble / Z roll / XY drag + 2-finger pinch scale & twist roll)
 	const activePointers = new Map<number, { x: number; y: number }>();
 	let lastPinchDist = 0;
+	let lastPinchAngle = 0;
 
 	function getPinchDistance(): number {
 		const pts = [...activePointers.values()];
 		if (pts.length < 2) return 0;
 		return Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+	}
+
+	function getPinchAngle(): number {
+		const pts = [...activePointers.values()];
+		if (pts.length < 2) return 0;
+		return Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
+	}
+
+	function wrapAngleRad(rad: number): number {
+		let a = rad;
+		while (a > Math.PI) a -= Math.PI * 2;
+		while (a < -Math.PI) a += Math.PI * 2;
+		return a;
 	}
 
 	function handlePointerDown(e: PointerEvent) {
@@ -681,6 +701,7 @@
 		activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 		if (activePointers.size === 2) {
 			lastPinchDist = getPinchDistance();
+			lastPinchAngle = getPinchAngle();
 		}
 	}
 
@@ -692,19 +713,38 @@
 		activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
 		if (activePointers.size === 1) {
-			if (!activeCalRoot || !height || (Math.abs(dxPx) < 0.01 && Math.abs(dyPx) < 0.01)) return;
-			const vFovRad = (V_FOV_DEG * Math.PI) / 180;
-			const fy = height / 2 / Math.tan(vFovRad / 2);
-			const Z = Math.max(0.35, -activeCalRoot.position.z);
-			const dWorldX = (dxPx * Z) / fy;
-			const dWorldY = -(dyPx * Z) / fy;
+			if (Math.abs(dxPx) < 0.01 && Math.abs(dyPx) < 0.01) return;
 
-			const invQuat = activeCalRoot.quaternion.clone().invert();
-			const localDelta = new THREE.Vector3(dWorldX, dWorldY, 0)
-				.applyQuaternion(invQuat)
-				.divideScalar(Math.max(0.05, activeCalRoot.scale.x));
+			if (e.shiftKey || e.buttons === 2 || calibrationGestureMode === 'roll') {
+				const rect = canvas?.getBoundingClientRect();
+				const cx = rect ? rect.left + rect.width / 2 : width / 2;
+				const cy = rect ? rect.top + rect.height / 2 : height / 2;
+				const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+				let dRollDeg = -dxPx * 0.45;
+				if (dist > 24) {
+					const prevAngle = Math.atan2(prev.y - cy, prev.x - cx);
+					const curAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
+					const dAngle = wrapAngleRad(curAngle - prevAngle);
+					dRollDeg = -(dAngle * 180) / Math.PI;
+				}
+				onCalibrationRotate?.(0, 0, dRollDeg);
+			} else if (calibrationGestureMode === 'rotate') {
+				onCalibrationRotate?.(dyPx * 0.45, dxPx * 0.45, 0);
+			} else {
+				if (!activeCalRoot || !height) return;
+				const vFovRad = (V_FOV_DEG * Math.PI) / 180;
+				const fy = height / 2 / Math.tan(vFovRad / 2);
+				const Z = Math.max(0.35, -activeCalRoot.position.z);
+				const dWorldX = (dxPx * Z) / fy;
+				const dWorldY = -(dyPx * Z) / fy;
 
-			onCalibrationDrag?.(localDelta.x, localDelta.y);
+				const invQuat = activeCalRoot.quaternion.clone().invert();
+				const localDelta = new THREE.Vector3(dWorldX, dWorldY, 0)
+					.applyQuaternion(invQuat)
+					.divideScalar(Math.max(0.05, activeCalRoot.scale.x));
+
+				onCalibrationDrag?.(localDelta.x, localDelta.y);
+			}
 		} else if (activePointers.size >= 2) {
 			const dist = getPinchDistance();
 			if (lastPinchDist > 4 && dist > 4) {
@@ -714,6 +754,13 @@
 				}
 			}
 			lastPinchDist = dist;
+
+			const curAngle = getPinchAngle();
+			const dAngle = wrapAngleRad(curAngle - lastPinchAngle);
+			if (Math.abs(dAngle) > 0.002) {
+				onCalibrationRotate?.(0, 0, -(dAngle * 180) / Math.PI);
+			}
+			lastPinchAngle = curAngle;
 		}
 	}
 
@@ -721,7 +768,14 @@
 		activePointers.delete(e.pointerId);
 		if (activePointers.size < 2) {
 			lastPinchDist = 0;
+			lastPinchAngle = 0;
 		}
+	}
+
+	function handleWheel(e: WheelEvent) {
+		if (!calibrationMode) return;
+		e.preventDefault();
+		onCalibrationScale?.(e.deltaY < 0 ? 1.05 : 0.95);
 	}
 
 	onMount(() => {
@@ -887,13 +941,7 @@
 				seamPairedIds.add(activeSeam.canvasB.id);
 			}
 
-			if (
-				showLiveCombined &&
-				activeSeam?.rule &&
-				(!pairInstance ||
-					pairInstance.loadedSignature !==
-						`${activeSeam.rule.id}|${activeSeam.rule.combinedModel.url}`)
-			) {
+			if (showLiveCombined && activeSeam?.rule) {
 				if (!pairInstance && scene) {
 					pairInstance = createPaintingInstance('pair_seam');
 					pairExtraGuides = createPairExtraGuides();
@@ -927,11 +975,19 @@
 						: arState !== 'scanning' && (!isPairedAway || fadingOutSinglesToCombined));
 
 				if (shouldShowInst) {
+					const wasVisible = inst.root.visible;
 					inst.root.visible = true;
-					inst.root.position.lerp(inst.targetPos, 0.4);
-					inst.root.quaternion.slerp(inst.targetQuat, 0.4);
-					const curScale = inst.root.scale.x;
-					inst.root.scale.setScalar(curScale + (inst.targetScale - curScale) * 0.4);
+					const quatDot = Math.abs(inst.root.quaternion.dot(inst.targetQuat));
+					if (!wasVisible || quatDot < 0.85) {
+						inst.root.position.copy(inst.targetPos);
+						inst.root.quaternion.copy(inst.targetQuat);
+						inst.root.scale.setScalar(inst.targetScale);
+					} else {
+						inst.root.position.lerp(inst.targetPos, 0.4);
+						inst.root.quaternion.slerp(inst.targetQuat, 0.4);
+						const curScale = inst.root.scale.x;
+						inst.root.scale.setScalar(curScale + (inst.targetScale - curScale) * 0.4);
+					}
 
 					inst.canvasGuide.visible = Boolean(calibrationMode && isCalThisSingle);
 					inst.hologram.group.visible = !calibrationMode && !isPairedAway && holoAlpha > 0.02;
@@ -1001,6 +1057,7 @@
 			// Pair seam rendering (live tracking_combined, fading out to singles, or calibration mode seam target)
 			if (pairInstance) {
 				if ((showLiveCombined || fadingOutCombinedToSingles || showCalSeam) && visible) {
+					const wasPairVisible = pairInstance.root.visible;
 					pairInstance.root.visible = true;
 					pairInstance.hologram.group.visible = false;
 					pairInstance.canvasGuide.visible = false;
@@ -1012,10 +1069,19 @@
 							(showCalSeam && projectedPoses.length >= 2));
 
 					if (useLiveSeam && activeSeam) {
-						pairInstance.root.position.lerp(activeSeam.pairOrigin, 0.45);
-						pairInstance.root.quaternion.slerp(activeSeam.pairQuaternion, 0.45);
-						const curS = pairInstance.root.scale.x;
-						pairInstance.root.scale.setScalar(curS + (activeSeam.pairScale - curS) * 0.45);
+						const quatDot = Math.abs(
+							pairInstance.root.quaternion.dot(activeSeam.pairQuaternion)
+						);
+						if (!wasPairVisible || quatDot < 0.85) {
+							pairInstance.root.position.copy(activeSeam.pairOrigin);
+							pairInstance.root.quaternion.copy(activeSeam.pairQuaternion);
+							pairInstance.root.scale.setScalar(activeSeam.pairScale);
+						} else {
+							pairInstance.root.position.lerp(activeSeam.pairOrigin, 0.45);
+							pairInstance.root.quaternion.slerp(activeSeam.pairQuaternion, 0.45);
+							const curS = pairInstance.root.scale.x;
+							pairInstance.root.scale.setScalar(curS + (activeSeam.pairScale - curS) * 0.45);
+						}
 						updatePairGuidesFromSeam(activeSeam);
 					} else {
 						pairInstance.root.position.copy(PREVIEW_POSE);
@@ -1119,6 +1185,10 @@
 	onpointermove={handlePointerMove}
 	onpointerup={handlePointerUpOrCancel}
 	onpointercancel={handlePointerUpOrCancel}
+	onwheel={handleWheel}
+	oncontextmenu={(e) => {
+		if (calibrationMode) e.preventDefault();
+	}}
 	class="absolute inset-0 z-20 h-full w-full transition-opacity duration-300 {calibrationMode
 		? 'pointer-events-auto touch-none cursor-grab active:cursor-grabbing'
 		: 'pointer-events-none'} {visible ? 'opacity-100' : 'opacity-0'}"

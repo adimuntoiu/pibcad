@@ -213,6 +213,54 @@ export function measureRawBounds(group: THREE.Group): {
 }
 
 const DEG_TO_RAD = Math.PI / 180;
+const RAD_TO_DEG = 180 / Math.PI;
+
+function normalizeDeg01(rad: number): number {
+	const raw = rad * RAD_TO_DEG;
+	let deg = ((((raw + 180) % 360) + 360) % 360) - 180;
+	if (Math.abs(deg + 180) < 1e-6 && raw > 0) {
+		deg = 180;
+	}
+	const rounded = Math.round(deg * 10) / 10;
+	return rounded === 0 ? 0 : rounded;
+}
+
+/**
+ * Composes canvas-space pitch (+X), yaw (+Y), and roll (+Z) increments (in degrees)
+ * onto an existing XYZ Euler rotation (in degrees) using quaternions, returning the
+ * updated `[rx, ry, rz]` Euler angles in `[-180, 180]` rounded to `0.1°`.
+ */
+export function composeCalibrationRotation(
+	currentDeg: Vec3Tuple,
+	deltaPitchDeg: number,
+	deltaYawDeg: number,
+	deltaRollDeg: number
+): Vec3Tuple {
+	const qCurrent = new THREE.Quaternion().setFromEuler(
+		new THREE.Euler(
+			currentDeg[0] * DEG_TO_RAD,
+			currentDeg[1] * DEG_TO_RAD,
+			currentDeg[2] * DEG_TO_RAD,
+			'XYZ'
+		)
+	);
+	const qPitch = new THREE.Quaternion().setFromAxisAngle(
+		new THREE.Vector3(1, 0, 0),
+		deltaPitchDeg * DEG_TO_RAD
+	);
+	const qYaw = new THREE.Quaternion().setFromAxisAngle(
+		new THREE.Vector3(0, 1, 0),
+		deltaYawDeg * DEG_TO_RAD
+	);
+	const qRoll = new THREE.Quaternion().setFromAxisAngle(
+		new THREE.Vector3(0, 0, 1),
+		deltaRollDeg * DEG_TO_RAD
+	);
+	const qDelta = qRoll.multiply(qYaw).multiply(qPitch);
+	const qNext = qDelta.multiply(qCurrent).normalize();
+	const euler = new THREE.Euler().setFromQuaternion(qNext, 'XYZ');
+	return [normalizeDeg01(euler.x), normalizeDeg01(euler.y), normalizeDeg01(euler.z)];
+}
 
 /**
  * Wraps a raw loaded 3D model in a two-tier normalized + placement hierarchy:

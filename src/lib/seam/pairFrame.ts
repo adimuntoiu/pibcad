@@ -39,8 +39,6 @@ export interface SeamEvaluationResult {
 	seamLineEnd: THREE.Vector3;
 }
 
-const WORLD_UP = new THREE.Vector3(0, 1, 0);
-
 export function directionToEdgeSide(localDx: number, localDy: number): EdgeSide {
 	if (Math.abs(localDx) >= Math.abs(localDy)) {
 		return localDx >= 0 ? 'right' : 'left';
@@ -157,19 +155,25 @@ export function evaluatePairSeam(
 	const zAxis = new THREE.Vector3().addVectors(normalA, normalB).normalize();
 	if (zAxis.lengthSq() < 1e-6) zAxis.set(0, 0, 1);
 
-	const pairVec = new THREE.Vector3().subVectors(poseB.position, poseA.position);
+	const isSwappedSeam =
+		(edgeA === 'C' && edgeB === 'C') || (edgeA === 'D' && edgeB === 'D');
+	const canonicalLeftId = matchedRule
+		? isSwappedSeam
+			? matchedRule.canvasBId
+			: matchedRule.canvasAId
+		: cfgA.id <= cfgB.id
+			? cfgA.id
+			: cfgB.id;
+	const fromPose = cfgA.id === canonicalLeftId ? poseA : poseB;
+	const toPose = cfgA.id === canonicalLeftId ? poseB : poseA;
+
+	const pairVec = new THREE.Vector3().subVectors(toPose.position, fromPose.position);
 	pairVec.addScaledVector(zAxis, -pairVec.dot(zAxis));
 	if (pairVec.lengthSq() < 1e-6) {
-		pairVec.set(1, 0, 0).applyQuaternion(poseA.quaternion);
+		pairVec.set(1, 0, 0).applyQuaternion(fromPose.quaternion);
 	}
 	const xAxis = pairVec.normalize();
 	const yAxis = new THREE.Vector3().crossVectors(zAxis, xAxis).normalize();
-
-	// Pick sign along seam axis so Y points closest to screen-up (+Y)
-	if (yAxis.dot(WORLD_UP) < 0) {
-		xAxis.negate();
-		yAxis.negate();
-	}
 
 	const basis = new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis);
 	const pairQuaternion = new THREE.Quaternion().setFromRotationMatrix(basis);
@@ -217,10 +221,11 @@ export function evaluateAllPairSeams(
 	poses: PaintingPoseFrame[],
 	manifest: ArtManifest
 ): SeamEvaluationResult[] {
+	const sortedPoses = [...poses].sort((a, b) => a.id.localeCompare(b.id));
 	const results: SeamEvaluationResult[] = [];
-	for (let i = 0; i < poses.length; i += 1) {
-		for (let j = i + 1; j < poses.length; j += 1) {
-			const res = evaluatePairSeam(poses[i], poses[j], manifest);
+	for (let i = 0; i < sortedPoses.length; i += 1) {
+		for (let j = i + 1; j < sortedPoses.length; j += 1) {
+			const res = evaluatePairSeam(sortedPoses[i], sortedPoses[j], manifest);
 			if (res) results.push(res);
 		}
 	}

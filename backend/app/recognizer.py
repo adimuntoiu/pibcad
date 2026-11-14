@@ -622,9 +622,17 @@ def _compute_canvas_pose(
     if float(t_three[2]) > 0:
         t_three = -t_three
 
+    dx_three = dx
+    dy_three = -dy
+
+    def is_pose_valid(R_mat: np.ndarray) -> bool:
+        n_z = float(R_mat[2, 2])
+        x_dot = float(R_mat[0, 0]) * dx_three + float(R_mat[1, 0]) * dy_three
+        return n_z > 0.1 and x_dot > 0.0
+
     normal = R_three[:, 2]
-    # Surface front normal must generally face the camera (+Z in Three.js cam coords)
-    if float(normal[2]) < 0:
+    # Surface front normal must face the camera (+Z) and local +X must align with canonical top edge
+    if not is_pose_valid(R_three):
         ok2, rvec2, tvec2 = cv2.solvePnP(
             obj_pts, corners.astype(np.float32), K, None, flags=cv2.SOLVEPNP_ITERATIVE
         )
@@ -632,9 +640,17 @@ def _compute_canvas_pose(
             R_cv2, _ = cv2.Rodrigues(rvec2)
             R_three2 = S @ R_cv2
             t_three2 = S @ tvec2.ravel()
-            if float(R_three2[2, 2]) > 0 and float(t_three2[2]) < 0:
+            if float(t_three2[2]) > 0:
+                t_three2 = -t_three2
+            if is_pose_valid(R_three2) and float(t_three2[2]) < 0:
                 R_three, t_three = R_three2, t_three2
                 normal = R_three[:, 2]
+
+    if not is_pose_valid(R_three):
+        rad = -np.radians(rotation_deg)
+        c_r, s_r = float(np.cos(rad)), float(np.sin(rad))
+        R_three = np.array([[c_r, -s_r, 0.0], [s_r, c_r, 0.0], [0.0, 0.0, 1.0]], dtype=np.float64)
+        normal = R_three[:, 2]
 
     return {
         "rotation_deg": round(rotation_deg, 1),
@@ -868,11 +884,12 @@ class PaintingDetector:
         des_r = _rootsift(des)
 
         if des_r is not None and kps and len(kps) >= 8:
+            min_inliers = 12 if is_mirrored else 8
             frame_pts = np.float32([kp.pt for kp in kps])
             sift_matches: list[tuple[dict[str, Any], int, np.ndarray]] = []
             for ref in self.refs:
                 result = self._match_sift(ref, frame_pts, des_r, fws, fhs)
-                if result and result[0] >= 8:
+                if result and result[0] >= min_inliers:
                     sift_matches.append((ref, result[0], result[1]))
 
             sift_matches.sort(key=lambda x: x[1], reverse=True)
@@ -909,8 +926,8 @@ class PaintingDetector:
                     }
                 )
 
-        # 2. Secondary fallback: check quad detector only when ASIFT found no paintings
-        if len(found_paintings) == 0:
+        # 2. Secondary fallback: check quad detector only on non-mirrored frames when ASIFT found no paintings
+        if len(found_paintings) == 0 and not is_mirrored:
             bgr_360, _ = _resize_long_side(bgr_raw, 360)
             fh360, fw360 = bgr_360.shape[:2]
             quad_hits = self._match_quads(bgr_360)

@@ -720,4 +720,66 @@ describe('evaluateAllPairSeams', () => {
 			expect(res!.rule?.id).toBe(`seam-${expectedCode}`);
 		}
 	});
+
+	it('produces identical pairQuaternion regardless of input order and rotates 180 deg with upside-down paintings', () => {
+		// Seam AA: canonical left = irlo1 (90 deg CW), canonical right = irlo2 (270 deg CW)
+		const pose1: PaintingPoseFrame = {
+			id: 'irlo1',
+			position: new THREE.Vector3(-0.54, 0, -2),
+			quaternion: cwRotQuat(90),
+			scale: 1.0
+		};
+		const pose2: PaintingPoseFrame = {
+			id: 'irlo2',
+			position: new THREE.Vector3(0.54, 0, -2),
+			quaternion: cwRotQuat(270),
+			scale: 1.0
+		};
+
+		const ab = evaluatePairSeam(pose1, pose2, TEST_MANIFEST)!;
+		const ba = evaluatePairSeam(pose2, pose1, TEST_MANIFEST)!;
+		expect(ab.isCompatible).toBe(true);
+		expect(ba.isCompatible).toBe(true);
+		expect(ab.pairOrigin.distanceTo(ba.pairOrigin)).toBeLessThan(1e-5);
+		expect(Math.abs(ab.pairQuaternion.dot(ba.pairQuaternion))).toBeCloseTo(1, 5);
+
+		// Also verify swapped-seam order invariance (CC upright: canonical left = irlo2 @ 0 deg, right = irlo1 @ 0 deg)
+		const cc2: PaintingPoseFrame = {
+			id: 'irlo2',
+			position: new THREE.Vector3(-0.54, 0, -2),
+			quaternion: cwRotQuat(0),
+			scale: 1.0
+		};
+		const cc1: PaintingPoseFrame = {
+			id: 'irlo1',
+			position: new THREE.Vector3(0.54, 0, -2),
+			quaternion: cwRotQuat(0),
+			scale: 1.0
+		};
+		const ccForward = evaluatePairSeam(cc1, cc2, TEST_MANIFEST)!;
+		const ccReverse = evaluatePairSeam(cc2, cc1, TEST_MANIFEST)!;
+		expect(ccForward.isCompatible).toBe(true);
+		expect(Math.abs(ccForward.pairQuaternion.dot(ccReverse.pairQuaternion))).toBeCloseTo(1, 5);
+
+		// Rotate the whole AA pair upside down (180 deg around Z camera view axis)
+		const rot180 = cwRotQuat(180);
+		const pose1UpsideDown: PaintingPoseFrame = {
+			id: 'irlo1',
+			position: pose1.position.clone().sub(new THREE.Vector3(0, 0, -2)).applyQuaternion(rot180).add(new THREE.Vector3(0, 0, -2)),
+			quaternion: rot180.clone().multiply(pose1.quaternion),
+			scale: 1.0
+		};
+		const pose2UpsideDown: PaintingPoseFrame = {
+			id: 'irlo2',
+			position: pose2.position.clone().sub(new THREE.Vector3(0, 0, -2)).applyQuaternion(rot180).add(new THREE.Vector3(0, 0, -2)),
+			quaternion: rot180.clone().multiply(pose2.quaternion),
+			scale: 1.0
+		};
+		const upsideDown = evaluatePairSeam(pose1UpsideDown, pose2UpsideDown, TEST_MANIFEST)!;
+		expect(upsideDown.isCompatible).toBe(true);
+		const expectedQuat180 = rot180.clone().multiply(ab.pairQuaternion);
+		expect(Math.abs(upsideDown.pairQuaternion.dot(expectedQuat180))).toBeCloseTo(1, 5);
+		// Ensure it actually rotated 180 deg relative to upright (dot ~ 0), not flipped back to 0 deg
+		expect(Math.abs(upsideDown.pairQuaternion.dot(ab.pairQuaternion))).toBeCloseTo(0, 4);
+	});
 });

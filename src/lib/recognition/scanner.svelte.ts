@@ -44,7 +44,11 @@ function snapDegTo90(deg: number): number {
 function smoothCanonicalCorners(prev: Point[], next: Point[]): Point[] {
 	if (prev.length !== 4 || next.length !== 4) return next;
 	const d0Sq = (prev[0].x - next[0].x) ** 2 + (prev[0].y - next[0].y) ** 2;
-	if (d0Sq > SNAP_JUMP_THRESHOLD_SQ) {
+	const spanSq = Math.max(1e-4, (next[1].x - next[0].x) ** 2 + (next[1].y - next[0].y) ** 2);
+	const prevRot = computeRotationDegFromCorners(prev);
+	const nextRot = computeRotationDegFromCorners(next);
+	const rotDiff = Math.abs((((nextRot - prevRot + 180) % 360) + 360) % 360 - 180);
+	if (d0Sq > SNAP_JUMP_THRESHOLD_SQ || d0Sq > spanSq * 0.45 || rotDiff > 35) {
 		return next;
 	}
 	return next.map((p, k) => ({

@@ -16,7 +16,10 @@
     {
       "id": "irlo1",
       "name": "Irlo I — Stone Guardian",
-      "aliases": ["painting-c-monolith-i", "painting-a-solar"],
+      "aliases": [
+        "painting-c-monolith-i",
+        "painting-a-solar"
+      ],
       "imageTargetUrl": "/demo/irlo1.jpg",
       "edges": {
         "top": "A",
@@ -27,21 +30,36 @@
       "singleModel": {
         "url": "/demo/models/irlo1_single.glb",
         "mode": "overlay",
-        "scale": 1.0,
+        "scale": 1,
         "fitDimension": "width",
-        "fitFraction": 1.0,
-        "offset": [0, 0, 0],
-        "rotation": [0, 0, 0],
+        "fitFraction": 1,
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
         "axisConvention": "yUp",
-        "flip": [false, false, false],
+        "flip": [
+          false,
+          false,
+          false
+        ],
         "pivot": "front",
-        "depthScale": 1.0
+        "depthScale": 1
       }
     },
     {
       "id": "irlo2",
       "name": "Irlo II — Inverted Horizon",
-      "aliases": ["painting-d-monolith-ii", "painting-b-lunar"],
+      "aliases": [
+        "painting-d-monolith-ii",
+        "painting-b-lunar"
+      ],
       "imageTargetUrl": "/demo/irlo2.jpg",
       "edges": {
         "top": "A",
@@ -52,15 +70,27 @@
       "singleModel": {
         "url": "/demo/models/irlo2_single.glb",
         "mode": "overlay",
-        "scale": 1.0,
+        "scale": 1,
         "fitDimension": "width",
-        "fitFraction": 1.0,
-        "offset": [0, 0, 0],
-        "rotation": [0, 0, 0],
+        "fitFraction": 1,
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          -180
+        ],
         "axisConvention": "yUp",
-        "flip": [false, false, false],
+        "flip": [
+          false,
+          false,
+          false
+        ],
         "pivot": "front",
-        "depthScale": 1.0
+        "depthScale": 1
       }
     }
   ],
@@ -74,15 +104,27 @@
       "combinedModel": {
         "url": "/demo/models/combined_AA.glb",
         "mode": "overlay",
-        "scale": 1.0,
+        "scale": 1.07,
         "fitDimension": "width",
-        "fitFraction": 1.0,
-        "offset": [0, 0, 0],
-        "rotation": [0, 0, 0],
+        "fitFraction": 2,
+        "offset": [
+          -0.12,
+          0,
+          0
+        ],
+        "rotation": [
+          5.3,
+          1,
+          -179.1
+        ],
         "axisConvention": "yUp",
-        "flip": [false, false, false],
+        "flip": [
+          false,
+          false,
+          false
+        ],
         "pivot": "front",
-        "depthScale": 1.0
+        "depthScale": 1
       }
     },
     {
@@ -94,15 +136,27 @@
       "combinedModel": {
         "url": "/demo/models/combined_BB.glb",
         "mode": "overlay",
-        "scale": 1.0,
+        "scale": 1,
         "fitDimension": "width",
-        "fitFraction": 1.0,
-        "offset": [0, 0, 0],
-        "rotation": [0, 0, 0],
+        "fitFraction": 2,
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
         "axisConvention": "yUp",
-        "flip": [false, false, false],
+        "flip": [
+          false,
+          false,
+          false
+        ],
         "pivot": "front",
-        "depthScale": 1.0
+        "depthScale": 1
       }
     },
     {
@@ -114,15 +168,27 @@
       "combinedModel": {
         "url": "/demo/models/combined_CC.glb",
         "mode": "overlay",
-        "scale": 1.0,
+        "scale": 1,
         "fitDimension": "width",
-        "fitFraction": 1.0,
-        "offset": [0, 0, 0],
-        "rotation": [0, 0, 0],
+        "fitFraction": 2,
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
         "axisConvention": "yUp",
-        "flip": [false, false, false],
+        "flip": [
+          false,
+          false,
+          false
+        ],
         "pivot": "front",
-        "depthScale": 1.0
+        "depthScale": 1
       }
     },
     {
@@ -134,15 +200,27 @@
       "combinedModel": {
         "url": "/demo/models/combined_DD.glb",
         "mode": "overlay",
-        "scale": 1.0,
+        "scale": 1,
         "fitDimension": "width",
-        "fitFraction": 1.0,
-        "offset": [0, 0, 0],
-        "rotation": [0, 0, 0],
+        "fitFraction": 2,
+        "offset": [
+          0.014,
+          0.18,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
         "axisConvention": "yUp",
-        "flip": [false, false, false],
+        "flip": [
+          false,
+          false,
+          false
+        ],
         "pivot": "front",
-        "depthScale": 1.0
+        "depthScale": 1
       }
     }
   ]

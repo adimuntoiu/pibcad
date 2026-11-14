@@ -2,9 +2,13 @@
 	import { onMount, onDestroy } from 'svelte';
 	import type * as THREE from 'three';
 	import CornerOverlay from '#lib/CornerOverlay.svelte';
-	import ModelARCanvas, { type ARDiagnostics } from '#lib/3d/ModelARCanvas.svelte';
+	import ModelARCanvas, {
+		type ARDiagnostics,
+		type CalibrationGestureMode
+	} from '#lib/3d/ModelARCanvas.svelte';
 	import Model3DModal from '#lib/3d/Model3DModal.svelte';
 	import { preloadManifestModels, preloadPairModels } from '#lib/3d/modelLoader';
+	import { composeCalibrationRotation } from '#lib/3d/modelNormalization';
 	import {
 		StaticManifestRepository,
 		getRotatedEdgeLabels,
@@ -44,6 +48,7 @@
 	// Dev-only calibration state (tree-shaken away in production builds)
 	const isDev = import.meta.env.DEV;
 	let calibrationMode = $state(false);
+	let calibrationGestureMode = $state<CalibrationGestureMode>('rotate');
 	let calibrationTargetId = $state('irlo1');
 	let calibrationDrafts = $state<Record<string, NormalizedModelSpec>>({});
 	let calibrationUndoStacks = $state<Record<string, NormalizedModelSpec[]>>({});
@@ -172,6 +177,18 @@
 		lastGestureUndoAt = now;
 		const next = cloneSpec(activeCalSpec);
 		next.scale = Math.round(Math.max(0.05, Math.min(5, next.scale * scaleFactor)) * 1000) / 1000;
+		calibrationDrafts = { ...calibrationDrafts, [calibrationTargetId]: next };
+	}
+
+	function handleCalibrationRotate(dPitchDeg: number, dYawDeg: number, dRollDeg: number) {
+		if (!isDev || !calibrationMode || !activeCalSpec) return;
+		const now = performance.now();
+		if (now - lastGestureUndoAt > 600) {
+			pushUndoSnapshot(calibrationTargetId);
+		}
+		lastGestureUndoAt = now;
+		const next = cloneSpec(activeCalSpec);
+		next.rotation = composeCalibrationRotation(next.rotation, dPitchDeg, dYawDeg, dRollDeg);
 		calibrationDrafts = { ...calibrationDrafts, [calibrationTargetId]: next };
 	}
 
@@ -402,11 +419,13 @@
 			calibrationSpec={isDev ? activeCalSpec : null}
 			calibrationWireframe={isDev ? calibrationWireframe : false}
 			calibrationOpacity={isDev ? calibrationOpacity : 1}
+			calibrationGestureMode={isDev ? calibrationGestureMode : 'rotate'}
 			onFpsUpdate={(fps) => (renderFps = fps)}
 			onFrameTick={handleFrameTick}
 			onDiagnosticsUpdate={(diag) => (arDiagnostics = diag)}
 			onCalibrationDrag={isDev ? handleCalibrationDrag : undefined}
 			onCalibrationScale={isDev ? handleCalibrationScale : undefined}
+			onCalibrationRotate={isDev ? handleCalibrationRotate : undefined}
 		/>
 	{/if}
 
@@ -437,6 +456,18 @@
 			</div>
 
 			<div class="flex items-center gap-1.5">
+				{#if isDev}
+					<button
+						type="button"
+						onclick={toggleCalibrationMode}
+						class="rounded-full border px-3 py-2 text-xs font-semibold backdrop-blur-xl transition-colors {calibrationMode
+							? 'border-amber-400/60 bg-amber-500/25 text-amber-200'
+							: 'border-white/15 bg-zinc-950/85 text-zinc-300 hover:text-white'}"
+					>
+						{calibrationMode ? 'Cal: ON' : 'Calibrate'}
+					</button>
+				{/if}
+
 				<!-- Debug HUD Toggle -->
 				<button
 					type="button"
@@ -758,6 +789,7 @@
 					spec={activeCalSpec}
 					wireframe={calibrationWireframe}
 					opacity={calibrationOpacity}
+					gestureMode={calibrationGestureMode}
 					canUndo={(calibrationUndoStacks[calibrationTargetId]?.length ?? 0) > 0}
 					saving={calibrationSaving}
 					statusMessage={calibrationStatus}
@@ -767,6 +799,7 @@
 					}}
 					onBeginEdit={() => pushUndoSnapshot(calibrationTargetId)}
 					onChangeSpec={handleCalibrationSpecChange}
+					onChangeGestureMode={(m) => (calibrationGestureMode = m)}
 					onToggleWireframe={(next) => (calibrationWireframe = next)}
 					onChangeOpacity={(next) => (calibrationOpacity = next)}
 					onUndo={handleCalibrationUndo}

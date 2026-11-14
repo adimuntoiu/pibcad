@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
 	buildNormalizedModelHierarchy,
+	composeCalibrationRotation,
 	computeNormalizationParams,
 	updatePlacementOnRoot
 } from './modelNormalization';
@@ -111,5 +112,54 @@ describe('buildNormalizedModelHierarchy & updatePlacementOnRoot', () => {
 		expect(size2.y).toBeCloseTo(2.0, 3);
 		expect(size2.z).toBeCloseTo(0.5, 3);
 		expect(box2.min.z).toBeCloseTo(0.1, 3);
+	});
+});
+
+describe('composeCalibrationRotation', () => {
+	it('composes pitch, yaw, and roll from [0, 0, 0] into expected Euler angles', () => {
+		expect(composeCalibrationRotation([0, 0, 0], 15, 0, 0)).toEqual([15, 0, 0]);
+		expect(composeCalibrationRotation([0, 0, 0], 0, -25.5, 0)).toEqual([0, -25.5, 0]);
+		expect(composeCalibrationRotation([0, 0, 0], 0, 0, 45)).toEqual([0, 0, 45]);
+
+		const combined = composeCalibrationRotation([10, 0, 0], 0, 20, 30);
+		const qComposed = new THREE.Quaternion().setFromEuler(
+			new THREE.Euler(
+				(combined[0] * Math.PI) / 180,
+				(combined[1] * Math.PI) / 180,
+				(combined[2] * Math.PI) / 180,
+				'XYZ'
+			)
+		);
+		const qExpected = new THREE.Quaternion()
+			.setFromAxisAngle(new THREE.Vector3(0, 0, 1), (30 * Math.PI) / 180)
+			.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (20 * Math.PI) / 180))
+			.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), (10 * Math.PI) / 180));
+		expect(Math.abs(qComposed.dot(qExpected))).toBeCloseTo(1, 3);
+	});
+
+	it('keeps canvas-space pitch and yaw direction consistent when starting from [0, 0, 180]', () => {
+		const yawFromZero = composeCalibrationRotation([0, 0, 0], 0, 30, 0);
+		const yawFromFlipped = composeCalibrationRotation([0, 0, 180], 0, 30, 0);
+
+		const applyRot = (deg: [number, number, number], v: THREE.Vector3) =>
+			v.clone().applyEuler(
+				new THREE.Euler((deg[0] * Math.PI) / 180, (deg[1] * Math.PI) / 180, (deg[2] * Math.PI) / 180, 'XYZ')
+			);
+
+		// +Z forward vector yaws toward +X in canvas space in both cases
+		const vZero = applyRot(yawFromZero, new THREE.Vector3(0, 0, 1));
+		const vFlipped = applyRot(yawFromFlipped, new THREE.Vector3(0, 0, 1));
+		expect(vZero.x).toBeCloseTo(0.5, 3);
+		expect(vFlipped.x).toBeCloseTo(0.5, 3);
+		expect(vFlipped.z).toBeCloseTo(vZero.z, 3);
+
+		// +Z forward vector pitches toward -Y in canvas space in both cases
+		const pitchFromZero = composeCalibrationRotation([0, 0, 0], 30, 0, 0);
+		const pitchFromFlipped = composeCalibrationRotation([0, 0, 180], 30, 0, 0);
+		const pZero = applyRot(pitchFromZero, new THREE.Vector3(0, 0, 1));
+		const pFlipped = applyRot(pitchFromFlipped, new THREE.Vector3(0, 0, 1));
+		expect(pZero.y).toBeCloseTo(-0.5, 3);
+		expect(pFlipped.y).toBeCloseTo(-0.5, 3);
+		expect(pFlipped.z).toBeCloseTo(pZero.z, 3);
 	});
 });

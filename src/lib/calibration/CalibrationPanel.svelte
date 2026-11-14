@@ -6,6 +6,9 @@
 		PlacementMode
 	} from '../manifest/types';
 	import { defaultPivotForMode } from '../manifest/repository';
+	import { composeCalibrationRotation } from '../3d/modelNormalization';
+
+	type GestureMode = 'rotate' | 'roll' | 'move';
 
 	interface TargetOption {
 		id: string;
@@ -18,12 +21,14 @@
 		spec: NormalizedModelSpec;
 		wireframe: boolean;
 		opacity: number;
+		gestureMode?: GestureMode;
 		canUndo: boolean;
 		saving?: boolean;
 		statusMessage?: string | null;
 		onSelectTarget: (id: string) => void;
 		onBeginEdit?: () => void;
 		onChangeSpec: (next: NormalizedModelSpec, pushUndo?: boolean) => void;
+		onChangeGestureMode?: (mode: GestureMode) => void;
 		onToggleWireframe: (next: boolean) => void;
 		onChangeOpacity: (next: number) => void;
 		onUndo: () => void;
@@ -39,12 +44,14 @@
 		spec,
 		wireframe,
 		opacity,
+		gestureMode = 'rotate',
 		canUndo,
 		saving = false,
 		statusMessage = null,
 		onSelectTarget,
 		onBeginEdit,
 		onChangeSpec,
+		onChangeGestureMode,
 		onToggleWireframe,
 		onChangeOpacity,
 		onUndo,
@@ -67,8 +74,23 @@
 
 	function wrapDeg(deg: number): number {
 		let d = ((deg + 180) % 360 + 360) % 360 - 180;
-		if (d === -180 && deg > 0) d = 180;
-		return Math.round(d);
+		if (Math.abs(d + 180) < 1e-6 && deg > 0) d = 180;
+		const rounded = Math.round(d * 10) / 10;
+		return rounded === 0 ? 0 : rounded;
+	}
+
+	function formatDeg(deg: number): string {
+		return Number.isInteger(deg) ? String(deg) : deg.toFixed(1);
+	}
+
+	function applyQuickFlipRotation(dPitchDeg: number, dYawDeg: number, dRollDeg: number) {
+		onChangeSpec(
+			{
+				...spec,
+				rotation: composeCalibrationRotation(spec.rotation, dPitchDeg, dYawDeg, dRollDeg)
+			},
+			true
+		);
 	}
 
 	function setScale(val: number, pushUndo = false) {
@@ -129,14 +151,28 @@
 >
 	<div class="overflow-hidden rounded-3xl border border-amber-400/30 bg-zinc-950/92 text-xs text-zinc-200 shadow-2xl backdrop-blur-xl">
 		<!-- Header Bar -->
-		<div class="flex items-center justify-between gap-2 border-b border-white/10 px-3.5 py-2.5">
-			<div class="flex items-center gap-2 min-w-0">
+		<div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3.5 py-2.5">
+			<div class="flex flex-wrap items-center gap-2 min-w-0">
 				<span class="rounded-full bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-amber-300 uppercase">
 					Dev Calibrate
 				</span>
-				<span class="truncate text-[11px] text-zinc-400">
-					Drag view = X/Y · Pinch = Scale
-				</span>
+				<div class="flex rounded-xl border border-white/10 bg-zinc-900 p-0.5">
+					{#each [
+						{ id: 'rotate' as const, label: 'Rotate 3D' },
+						{ id: 'roll' as const, label: 'Roll Z' },
+						{ id: 'move' as const, label: 'Move XY' }
+					] as modeOpt}
+						<button
+							type="button"
+							onclick={() => onChangeGestureMode?.(modeOpt.id)}
+							class="rounded-lg px-2 py-0.5 text-[10px] font-semibold transition-colors {gestureMode === modeOpt.id
+								? 'bg-amber-500/25 text-amber-200'
+								: 'text-zinc-400 hover:text-white'}"
+						>
+							{modeOpt.label}
+						</button>
+					{/each}
+				</div>
 			</div>
 
 			<div class="flex shrink-0 items-center gap-1.5">
@@ -313,9 +349,41 @@
 						{/each}
 					</div>
 
-					<!-- Per-axis Rotation (degrees) + 90 deg Snap Buttons -->
+					<!-- Per-axis Rotation (degrees) + Quick Flip Presets & 90 deg Snap Buttons -->
 					<div class="space-y-1.5 rounded-2xl border border-white/10 bg-zinc-900/75 p-2.5">
-						<div class="text-[11px] font-semibold text-zinc-200">Rotation (degrees)</div>
+						<div class="flex flex-wrap items-center justify-between gap-1.5">
+							<div class="text-[11px] font-semibold text-zinc-200">Rotation (degrees)</div>
+							<div class="flex flex-wrap gap-1 font-mono text-[10px]">
+								<button
+									type="button"
+									onclick={() => applyQuickFlipRotation(0, 0, 180)}
+									class="rounded-md border border-sky-500/30 bg-sky-500/15 px-1.5 py-0.5 text-sky-300 hover:bg-sky-500/25"
+								>
+									Flip Upside-Down (Z +180°)
+								</button>
+								<button
+									type="button"
+									onclick={() => applyQuickFlipRotation(180, 0, 0)}
+									class="rounded-md bg-zinc-800 px-1.5 py-0.5 text-rose-300 hover:bg-zinc-700"
+								>
+									Flip X +180°
+								</button>
+								<button
+									type="button"
+									onclick={() => applyQuickFlipRotation(0, 180, 0)}
+									class="rounded-md bg-zinc-800 px-1.5 py-0.5 text-emerald-300 hover:bg-zinc-700"
+								>
+									Flip Y +180°
+								</button>
+								<button
+									type="button"
+									onclick={() => onChangeSpec({ ...spec, rotation: [0, 0, 0] }, true)}
+									class="rounded-md bg-zinc-800 px-1.5 py-0.5 text-zinc-300 hover:bg-zinc-700"
+								>
+									Reset Rot (0,0,0)
+								</button>
+							</div>
+						</div>
 						{#each [
 							{ axis: 0 as const, label: 'Rot X', accent: 'accent-rose-400', text: 'text-rose-300' },
 							{ axis: 1 as const, label: 'Rot Y', accent: 'accent-emerald-400', text: 'text-emerald-300' },
@@ -327,14 +395,14 @@
 									type="range"
 									min="-180"
 									max="180"
-									step="1"
+									step="0.5"
 									value={spec.rotation[row.axis]}
 									onpointerdown={() => onBeginEdit?.()}
 									oninput={(e) => setRotationAxis(row.axis, Number(e.currentTarget.value))}
 									class="min-w-[95px] flex-1 {row.accent}"
 								/>
-								<span class="w-10 text-right font-mono text-[10px] text-zinc-300">
-									{spec.rotation[row.axis]}°
+								<span class="w-12 text-right font-mono text-[10px] text-zinc-300">
+									{formatDeg(spec.rotation[row.axis])}°
 								</span>
 								<div class="flex gap-1 font-mono text-[10px]">
 									<button
@@ -451,7 +519,7 @@
 						mode=<span class="text-emerald-300">{spec.mode}</span> · pivot=<span class="text-sky-300">{spec.pivot}</span> · axis=<span class="text-amber-300">{spec.axisConvention}</span> · scale=<span class="text-white">{spec.scale.toFixed(3)}</span> · depthScale=<span class="text-white">{spec.depthScale.toFixed(3)}</span>
 					</div>
 					<div>
-						offset=[{spec.offset.map((v) => v.toFixed(3)).join(', ')}] · rot=[{spec.rotation.join(', ')}]° · flip=[{spec.flip.join(', ')}]
+						offset=[{spec.offset.map((v) => v.toFixed(3)).join(', ')}] · rot=[{spec.rotation.map(formatDeg).join(', ')}]° · flip=[{spec.flip.join(', ')}]
 					</div>
 				</div>
 
