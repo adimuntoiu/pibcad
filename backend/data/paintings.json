@@ -10,5 +10,17 @@
     "title": "Equinox II — Astral Tide",
     "artist": "Mircea Popescu",
     "image": "painting_b_lunar.png"
+  },
+  {
+    "id": "painting-c-monolith-i",
+    "title": "Monolith I — Stone Guardian",
+    "artist": "Studio Archive",
+    "image": "painting_c_monolith_i.jpg"
+  },
+  {
+    "id": "painting-d-monolith-ii",
+    "title": "Monolith II — Inverted Horizon",
+    "artist": "Studio Archive",
+    "image": "painting_d_monolith_ii.jpg"
   }
 ]

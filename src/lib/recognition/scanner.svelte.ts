@@ -58,7 +58,7 @@ export class PaintingScanner {
 		this.errorMessage = null;
 
 		try {
-			this.capturer ??= new FrameCapturer(360, 0.65);
+			this.capturer ??= new FrameCapturer(480, 0.78);
 			this.stream = await startRearCamera(videoEl);
 		} catch (err) {
 			if (err instanceof CameraSetupError) {

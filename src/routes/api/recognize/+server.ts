@@ -15,13 +15,15 @@ interface ChildProcessHandle {
 	off(event: 'error', listener: (err: Error) => void): void;
 }
 
-// Warm Python OpenCV bridge (v3: white-margin stripping + 4-edge line intersection corner refinement)
+// Warm Python OpenCV bridge (v4: 4 paintings indexed, auto-reloads on recognizer.py or paintings.json change)
 const WORKER_SCRIPT = `
 import sys, os, struct, json, importlib
 sys.path.insert(0, 'backend')
 import app.recognizer as rec_mod
 rec_mod.detector.load()
-last_mtime = os.path.getmtime('backend/app/recognizer.py')
+def get_sig():
+    return (os.path.getmtime('backend/app/recognizer.py'), os.path.getmtime('backend/data/paintings.json'))
+last_sig = get_sig()
 sys.stdout.buffer.write(b'READY\\n')
 sys.stdout.buffer.flush()
 
@@ -37,9 +39,9 @@ while True:
             break
         data += chunk
     try:
-        mtime = os.path.getmtime('backend/app/recognizer.py')
-        if mtime != last_mtime:
-            last_mtime = mtime
+        sig = get_sig()
+        if sig != last_sig:
+            last_sig = sig
             rec_mod = importlib.reload(rec_mod)
             rec_mod.detector.load()
     except Exception:
