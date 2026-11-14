@@ -1,42 +1,14 @@
 [
-	{
-		"id": "painting-a-solar",
-		"pair_id": "pair-01-equinox",
-		"slot": "A",
-		"title": "Equinox I — Solar Ember",
-		"artist": "Mircea Popescu",
-		"image": "painting_a_solar.png",
-		"edges_0": {
-			"top": "A",
-			"right": "B",
-			"left": "C",
-			"bottom": "D"
-		},
-		"orientation_photos": {
-			"0": [],
-			"90": [],
-			"180": [],
-			"270": []
-		}
-	},
-	{
-		"id": "painting-b-lunar",
-		"pair_id": "pair-01-equinox",
-		"slot": "B",
-		"title": "Equinox II — Astral Tide",
-		"artist": "Mircea Popescu",
-		"image": "painting_b_lunar.png",
-		"edges_0": {
-			"top": "A",
-			"right": "B",
-			"left": "C",
-			"bottom": "D"
-		},
-		"orientation_photos": {
-			"0": [],
-			"90": [],
-			"180": [],
-			"270": []
-		}
-	}
+  {
+    "id": "painting-a-solar",
+    "title": "Equinox I — Solar Ember",
+    "artist": "Mircea Popescu",
+    "image": "painting_a_solar.png"
+  },
+  {
+    "id": "painting-b-lunar",
+    "title": "Equinox II — Astral Tide",
+    "artist": "Mircea Popescu",
+    "image": "painting_b_lunar.png"
+  }
 ]
