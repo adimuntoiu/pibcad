@@ -21,8 +21,9 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test": "vitest run",
 		"compile:targets": "node scripts/compile-targets.js",
-		"generate:glbs": "backend/.venv/bin/python scripts/generate-demo-glbs.py",
-		"convert:obj": "backend/.venv/bin/python scripts/convert-obj-to-glb.py"
+		"setup:backend": "node scripts/setup-backend.js",
+		"generate:glbs": "node scripts/run-python.js scripts/generate-demo-glbs.py",
+		"convert:obj": "node scripts/run-python.js scripts/convert-obj-to-glb.py"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^8.0.0",

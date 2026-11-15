@@ -69,6 +69,36 @@ class PythonDetectorBridge {
 	private queue: Promise<unknown> = Promise.resolve();
 	private readonly decoder = new TextDecoder();
 
+	private async resolvePythonBin(): Promise<string> {
+		const fsName = 'fs';
+		const pathName = 'path';
+		const fsMod = (await import(/* @vite-ignore */ fsName)) as unknown as {
+			existsSync: (p: string) => boolean;
+		};
+		const pathMod = (await import(/* @vite-ignore */ pathName)) as unknown as {
+			resolve: (...segments: string[]) => string;
+		};
+
+		const procEnv = (globalThis as unknown as { process?: { env?: Record<string, string | undefined>; platform?: string } }).process;
+		if (procEnv?.env?.PYTHON_BIN && fsMod.existsSync(procEnv.env.PYTHON_BIN)) {
+			return procEnv.env.PYTHON_BIN;
+		}
+
+		const isWin = procEnv?.platform === 'win32';
+		const candidates = [
+			pathMod.resolve(isWin ? 'backend/.venv/Scripts/python.exe' : 'backend/.venv/bin/python'),
+			pathMod.resolve(isWin ? '.venv/Scripts/python.exe' : '.venv/bin/python')
+		];
+
+		for (const candidate of candidates) {
+			if (fsMod.existsSync(candidate)) {
+				return candidate;
+			}
+		}
+
+		return isWin ? 'python' : 'python3';
+	}
+
 	private async ensureStarted(): Promise<void> {
 		if (this.proc && !this.proc.killed && this.readyPromise) {
 			return this.readyPromise;
@@ -83,7 +113,8 @@ class PythonDetectorBridge {
 			) => ChildProcessHandle;
 		};
 
-		const proc = cp.spawn('backend/.venv/bin/python', ['-u', '-c', WORKER_SCRIPT], {
+		const pythonBin = await this.resolvePythonBin();
+		const proc = cp.spawn(pythonBin, ['-u', '-c', WORKER_SCRIPT], {
 			stdio: ['pipe', 'pipe', 'inherit']
 		});
 		this.proc = proc;
@@ -169,23 +200,31 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ error: 'Uploaded file must be an image' }, { status: 400 });
 	}
 
-	// 1. If running under Vercel Services or remote backend, call via bound service URL
+	// 1. Try remote backend service (BACKEND_URL) or local Uvicorn HTTP server (port 8000)
 	const backendUrl = process.env.BACKEND_URL;
-	if (backendUrl) {
+	const candidateUrls = backendUrl
+		? [backendUrl]
+		: ['http://127.0.0.1:8000', 'http://localhost:8000'];
+
+	for (const candidate of candidateUrls) {
 		try {
-			const targetUrl = new URL('/api/recognize', backendUrl);
+			const targetUrl = new URL('/api/recognize', candidate);
 			const forwardData = new FormData();
 			forwardData.append('file', file);
+			const controller = new AbortController();
+			const timeout = setTimeout(() => controller.abort(), 3000);
 			const res = await fetch(targetUrl, {
 				method: 'POST',
-				body: forwardData
+				body: forwardData,
+				signal: controller.signal
 			});
-			const result = await res.json();
-			return json(result, { status: res.status });
-		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : String(err);
-			console.error('[api/recognize] Failed to reach bound backend service:', msg);
-			// fall through to local bridge if available
+			clearTimeout(timeout);
+			if (res.ok) {
+				const result = await res.json();
+				return json(result, { status: res.status });
+			}
+		} catch {
+			// Backend not running on this URL; try next candidate or fall back to child process
 		}
 	}
 
@@ -195,6 +234,20 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ error: 'Empty image file' }, { status: 400 });
 	}
 
-	const result = await bridge.detect(bytes);
-	return json(result);
+	try {
+		const result = await bridge.detect(bytes);
+		return json(result);
+	} catch (err: unknown) {
+		const msg = err instanceof Error ? err.message : String(err);
+		console.error('[api/recognize] In-process Python bridge failed:', msg);
+		return json(
+			{
+				match: false,
+				error: 'Recognition backend is offline or unconfigured.',
+				hint: 'Run "npm run setup:backend" or start FastAPI backend ("npm run dev:backend").',
+				details: msg
+			},
+			{ status: 503 }
+		);
+	}
 };

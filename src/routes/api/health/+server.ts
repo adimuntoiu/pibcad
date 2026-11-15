@@ -1,10 +1,16 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async () => {
-	const backendUrl = process.env.BACKEND_URL;
-	if (backendUrl) {
+	const candidateUrls = process.env.BACKEND_URL
+		? [process.env.BACKEND_URL]
+		: ['http://127.0.0.1:8000', 'http://localhost:8000'];
+
+	for (const url of candidateUrls) {
 		try {
-			const res = await fetch(new URL('/api/health', backendUrl));
+			const controller = new AbortController();
+			const timeout = setTimeout(() => controller.abort(), 1500);
+			const res = await fetch(new URL('/api/health', url), { signal: controller.signal });
+			clearTimeout(timeout);
 			if (res.ok) {
 				const backendHealth = await res.json();
 				return json({
@@ -13,8 +19,8 @@ export const GET: RequestHandler = async () => {
 					backend: backendHealth
 				});
 			}
-		} catch (err) {
-			console.warn('[api/health] Backend health query failed:', err);
+		} catch {
+			// ignore and try next
 		}
 	}
 

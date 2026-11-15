@@ -20,17 +20,22 @@ class Settings(BaseSettings):
     # `paintings` table and the storage bucket; otherwise the local
     # data/paintings.json catalog is used. Local files are also the fallback
     # if Supabase is unreachable.
-    supabase_url: str = ""
-    # Accepts SUPABASE_SERVICE_KEY or SUPABASE_SECKEY (new `sb_secret_...` or legacy JWT key)
+    supabase_url: str = Field(
+        default="", validation_alias=AliasChoices("SUPABASE_URL", "PUBLIC_SUPABASE_URL")
+    )
+    # Accepts SUPABASE_SERVICE_KEY, SUPABASE_SECKEY, or anon key fallback
     supabase_service_key: str = Field(
-        default="", validation_alias=AliasChoices("SUPABASE_SERVICE_KEY", "SUPABASE_SECKEY")
+        default="",
+        validation_alias=AliasChoices(
+            "SUPABASE_SERVICE_KEY", "SUPABASE_SECKEY", "PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_KEY"
+        ),
     )
     supabase_bucket: str = "paintings"
     supabase_table: str = "paintings"
     supabase_timeout_s: float = 10.0
 
     model_config = SettingsConfigDict(
-        env_file=BASE_DIR / ".env",
+        env_file=[BASE_DIR / ".env", BASE_DIR.parent / ".env"],
         env_file_encoding="utf-8",
         extra="ignore",
     )

@@ -8,7 +8,14 @@ const venvPython =
 		? path.join(backendDir, '.venv', 'Scripts', 'python.exe')
 		: path.join(backendDir, '.venv', 'bin', 'python');
 
-const pythonBin = fs.existsSync(venvPython) ? venvPython : 'python3';
+if (!fs.existsSync(venvPython)) {
+	console.warn('[BACKEND] Virtual environment not found at backend/.venv.');
+	console.warn('[BACKEND] Run "npm run setup:backend" to automatically configure Python.');
+}
+
+const pythonBin = fs.existsSync(venvPython)
+	? venvPython
+	: (process.platform === 'win32' ? 'python' : 'python3');
 
 const args = [
 	'-m',
