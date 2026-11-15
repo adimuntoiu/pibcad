@@ -109,14 +109,14 @@
         "fitDimension": "width",
         "fitFraction": 2,
         "offset": [
-          0,
-          0,
-          0
+          0.075,
+          0.005,
+          0.045
         ],
         "rotation": [
           0,
           0,
-          0
+          -180
         ],
         "axisConvention": "yUp",
         "flip": [
@@ -148,7 +148,7 @@
         "rotation": [
           0,
           0,
-          0
+          -180
         ],
         "axisConvention": "yUp",
         "flip": [
