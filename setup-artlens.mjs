@@ -65,6 +65,7 @@ export type ScannerStatus =
 \t| 'idle'
 \t| 'starting_camera'
 \t| 'scanning'
+\t| 'detected'
 \t| 'recognized'
 \t| 'permission_denied'
 \t| 'no_camera'

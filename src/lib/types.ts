@@ -40,6 +40,7 @@ export type ScannerStatus =
 	| 'starting_camera'
 	| 'scanning'
 	| 'detected'
+	| 'recognized'
 	| 'permission_denied'
 	| 'no_camera'
 	| 'backend_unreachable';

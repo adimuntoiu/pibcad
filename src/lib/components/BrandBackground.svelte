@@ -10,7 +10,7 @@
 </script>
 
 <div
-	class="relative flex min-h-[100dvh] w-full flex-col overflow-x-hidden bg-[#511A9A] bg-cover bg-center bg-no-repeat {className}"
+	class="relative flex min-h-dvh w-full flex-col bg-[#511A9A] bg-cover bg-center bg-no-repeat {className}"
 	style="background-image: linear-gradient(180deg, #5A1CA7 0%, #441484 100%), url('/brand/purple-waves.webp'); background-blend-mode: overlay;"
 >
 	<!-- Safe Area Container -->

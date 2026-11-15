@@ -22,10 +22,10 @@
 		background-color: #000000;
 		color: #ffffff;
 		font-family: var(--font-sans);
-		overscroll-behavior: none;
 		-webkit-tap-highlight-color: transparent;
-		touch-action: manipulation;
 		min-height: 100dvh;
+		overflow-x: clip;
+		overflow-y: auto;
 	}
 
 	h1, h2, h3, .font-display {
@@ -61,7 +61,7 @@
 
 .page-transition-frame {
 	animation: pageFadeIn 160ms cubic-bezier(0.16, 1, 0.3, 1);
-	height: 100%;
+	min-height: 100dvh;
 	width: 100%;
 }
 

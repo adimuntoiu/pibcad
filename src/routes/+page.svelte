@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { page } from '$app/state';
 	import type * as THREE from 'three';
 	import CornerOverlay from '#lib/CornerOverlay.svelte';
 	import ModelARCanvas, {
@@ -27,6 +28,8 @@
 	import CircularButton from '#lib/components/CircularButton.svelte';
 
 	const DEFAULT_EDGES: CanvasEdgeMap = { top: 'A', right: 'B', bottom: 'D', left: 'C' };
+
+	const artistHref = $derived(page.data.user ? '/artist' : '/login');
 
 	const scanner = new PaintingScanner();
 	const stateMachine = new ARStateMachine();
@@ -70,7 +73,8 @@
 
 	const running = $derived(
 		scanner.status === 'scanning' ||
-			scanner.status === 'detected' ||
+			(scanner.status as string) === 'detected' ||
+			(scanner.status as string) === 'recognized' ||
 			scanner.status === 'backend_unreachable'
 	);
 
@@ -446,7 +450,9 @@
 		onloadedmetadata={syncVideoSize}
 		onresize={syncVideoSize}
 		class="h-full w-full object-cover {running ? 'opacity-100' : 'opacity-0'}"
-	></video>
+	>
+		<track kind="captions" />
+	</video>
 
 	<!-- 2D Corner + Oriented Edge Tracking Overlay (A/B/C/D rotates physically with artwork) -->
 	<CornerOverlay
@@ -517,7 +523,7 @@
 				{#if arSnapshot.state === 'generating'}
 					<span class="h-2.5 w-2.5 animate-ping rounded-full bg-amber-400"></span>
 					<span>Generating 3D model…</span>
-				{:else if scanner.status === 'detected' || arSnapshot.isHolding}
+				{:else if (scanner.status as string) === 'detected' || (scanner.status as string) === 'recognized' || arSnapshot.isHolding}
 					<span class="h-2.5 w-2.5 rounded-full {arSnapshot.isHolding ? 'bg-amber-400' : 'bg-emerald-400'}"></span>
 					<span>
 						{scanner.paintings.length > 1
@@ -553,7 +559,7 @@
 				</button>
 			{/if}
 
-			<CircularButton href="/login" ariaLabel="Artist Portal" size="md">
+			<CircularButton href={artistHref} ariaLabel={page.data.user ? 'Artist Dashboard' : 'Artist Login'} size="md">
 				<svg class="h-6 w-6 text-zinc-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
 				</svg>
@@ -685,10 +691,10 @@
 								</div>
 								{#if p.pose}
 									<div class="mt-0.5 text-[10px] text-sky-300">
-										Pos: [{p.pose.position.map((v) => v.toFixed(2)).join(', ')}]
+										Pos: [{p.pose.position.map((v: number) => v.toFixed(2)).join(', ')}]
 									</div>
 									<div class="text-[10px] text-zinc-400">
-										Norm: [{p.pose.normal.map((v) => v.toFixed(2)).join(', ')}]
+										Norm: [{p.pose.normal.map((v: number) => v.toFixed(2)).join(', ')}]
 									</div>
 								{/if}
 								{#if plane}
