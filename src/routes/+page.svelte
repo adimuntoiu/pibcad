@@ -17,6 +17,7 @@
 		resolveCanvasConfig
 	} from '#lib/manifest/repository';
 	import type { ArtManifest, CanvasEdgeMap, NormalizedModelSpec } from '#lib/manifest/types';
+	import { galleryService } from '#lib/gallery/galleryService';
 	import { PaintingScanner, type TrackedPainting } from '#lib/recognition/scanner.svelte';
 	import { evaluateAllPairSeams, type PaintingPoseFrame } from '#lib/seam/pairFrame';
 	import { computeCanvasPoseFromCorners } from '#lib/seam/poseProjection';
@@ -335,7 +336,7 @@
 		const title = cfg?.name ?? primary?.title ?? artworkId;
 		const artistName = primary?.artist || manifest?.artist || 'IRLO';
 		const modelUrl = cfg?.singleModel.url ?? primary?.modelUrl ?? null;
-		const thumbUrl = `/demo/${artworkId}.jpg`;
+		const thumbUrl = primary?.modelUrl ? `/demo/${artworkId}.jpg` : `/demo/${artworkId}.jpg`;
 
 		await collectionStore.save({
 			artworkId,
@@ -366,12 +367,14 @@
 			arSnapshot = next;
 		}
 
-		// Auto-save to collection on stable tracking (~1.5s)
-		const primary = scanner.paintings[0];
-		const trackingTargetId = primary ? canonicalizeId(primary.id) : null;
-		const result = stableTracker.update(trackingTargetId, nowMs);
-		if (result.saved && result.artworkId) {
-			void handleAutoSave(result.artworkId, primary);
+		// Auto-save to collection on stable tracking (~1.5s) across ALL tracked paintings
+		for (const p of scanner.paintings) {
+			const trackingTargetId = canonicalizeId(p.id);
+			const result = stableTracker.update(trackingTargetId, nowMs);
+			if (result.saved && result.artworkId) {
+				void handleAutoSave(result.artworkId, p);
+				break;
+			}
 		}
 	}
 
@@ -419,6 +422,33 @@
 		try {
 			const repo = new StaticManifestRepository('/demo/manifest.json');
 			const loaded = await repo.loadManifest();
+
+			// Merge published artworks from galleryService so custom artist paintings have canvas configs
+			try {
+				const published = await galleryService.getPublishedArtworks();
+				for (const art of published) {
+					const artId = art.id || art.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+					if (!loaded.canvases.some((c) => c.id === artId)) {
+						loaded.canvases.push({
+							id: artId,
+							name: art.title,
+							imageTargetUrl: art.image_path,
+							edges: { ...DEFAULT_EDGES },
+							singleModel: {
+								url: art.model_path || '/demo/models/default.glb',
+								mode: 'overlay',
+								scale: 1.0,
+								pivot: 'base',
+								offset: [0, 0, 0.02],
+								rotation: [0, 0, 0]
+							}
+						});
+					}
+				}
+			} catch (e) {
+				console.warn('Could not fetch published artist artworks for manifest:', e);
+			}
+
 			manifest = loaded;
 			scanner.holdMs = loaded.animation.dropHoldMs;
 			stateMachine.updateConfig(loaded.animation);
