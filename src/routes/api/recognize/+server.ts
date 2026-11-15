@@ -212,7 +212,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			const forwardData = new FormData();
 			forwardData.append('file', file);
 			const controller = new AbortController();
-			const timeout = setTimeout(() => controller.abort(), 3000);
+			const timeout = setTimeout(() => controller.abort(), 12000);
 			const res = await fetch(targetUrl, {
 				method: 'POST',
 				body: forwardData,
@@ -222,6 +222,17 @@ export const POST: RequestHandler = async ({ request }) => {
 			if (res.ok) {
 				const result = await res.json();
 				return json(result, { status: res.status });
+			} else {
+				const errText = await res.text();
+				console.error(`[api/recognize] Backend at ${candidate} returned ${res.status}:`, errText);
+				return json(
+					{
+						match: false,
+						error: `Backend error (${res.status})`,
+						details: errText
+					},
+					{ status: res.status }
+				);
 			}
 		} catch {
 			// Backend not running on this URL; try next candidate or fall back to child process
