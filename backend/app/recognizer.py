@@ -51,6 +51,18 @@ _SUPABASE_ALIASES = {
         "IRLO",
         "/demo/models/irlo2_single.glb",
     ),
+    "irloAbstract1": (
+        "irloAbstract1",
+        "IRLO Abstract I",
+        "IRLO",
+        "/demo/models/irloAbstract1.glb",
+    ),
+    "irloAbstract2": (
+        "irloAbstract2",
+        "IRLO Abstract II",
+        "IRLO",
+        "/demo/models/irloAbstract2.glb",
+    ),
 }
 
 

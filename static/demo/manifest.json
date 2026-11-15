@@ -93,6 +93,86 @@
         "pivot": "front",
         "depthScale": 1
       }
+    },
+    {
+      "id": "irloAbstract1",
+      "name": "IRLO Abstract I",
+      "aliases": [
+        "irlo-abstract-1",
+        "irloabstract1"
+      ],
+      "imageTargetUrl": "/demo/irloAbstract1.jpg",
+      "edges": {
+        "top": "A",
+        "right": "B",
+        "bottom": "C",
+        "left": "D"
+      },
+      "singleModel": {
+        "url": "/demo/models/irloAbstract1.glb",
+        "mode": "overlay",
+        "scale": 1,
+        "fitDimension": "width",
+        "fitFraction": 1,
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "axisConvention": "yUp",
+        "flip": [
+          false,
+          false,
+          false
+        ],
+        "pivot": "front",
+        "depthScale": 1
+      }
+    },
+    {
+      "id": "irloAbstract2",
+      "name": "IRLO Abstract II",
+      "aliases": [
+        "irlo-abstract-2",
+        "irloabstract2"
+      ],
+      "imageTargetUrl": "/demo/irloAbstract2.jpg",
+      "edges": {
+        "top": "A",
+        "right": "B",
+        "bottom": "C",
+        "left": "D"
+      },
+      "singleModel": {
+        "url": "/demo/models/irloAbstract2.glb",
+        "mode": "overlay",
+        "scale": 1,
+        "fitDimension": "width",
+        "fitFraction": 1,
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "axisConvention": "yUp",
+        "flip": [
+          false,
+          false,
+          false
+        ],
+        "pivot": "front",
+        "depthScale": 1
+      }
     }
   ],
   "seamRules": [
