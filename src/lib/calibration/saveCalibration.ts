@@ -4,9 +4,6 @@ export async function saveCalibrationSpec(
 	targetId: string,
 	spec: NormalizedModelSpec
 ): Promise<{ ok: boolean; manifest?: ArtManifest; error?: string }> {
-	if (!import.meta.env.DEV) {
-		return { ok: false, error: 'Calibration save disabled in production' };
-	}
 	const res = await fetch('/_dev/calibration', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },

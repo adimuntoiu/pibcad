@@ -298,4 +298,97 @@ export class PaintingScanner {
 		}
 		this.onDetectionSample?.(this.paintings, now);
 	}
+
+	/** Manually simulate a detected painting (useful in dev mode or when recognition backend is offline) */
+	simulate(paintingId: string, title?: string, artist?: string, modelUrl?: string): void {
+		const vw = this.videoEl?.videoWidth || 640;
+		const vh = this.videoEl?.videoHeight || 480;
+		const cx = vw / 2;
+		const cy = vh / 2;
+		const hw = Math.min(vw, vh) * 0.35;
+		const hh = hw * 1.25;
+
+		const corners: [number, number][] = [
+			[cx - hw, cy - hh],
+			[cx + hw, cy - hh],
+			[cx + hw, cy + hh],
+			[cx - hw, cy + hh]
+		];
+
+		this.apply({
+			match: true,
+			painting_id: paintingId,
+			title: title || paintingId,
+			artist: artist || 'IRLO',
+			corners,
+			inliers: 220,
+			model_path: modelUrl || `/demo/models/${paintingId}.glb`,
+			rotation_deg: 0,
+			snapped_rotation_deg: 0
+		});
+	}
+
+	/** Simulate an upright side-by-side seam pair */
+	simulatePair(idA = 'irlo1', idB = 'irlo2'): void {
+		const vw = this.videoEl?.videoWidth || 640;
+		const vh = this.videoEl?.videoHeight || 480;
+		const cx = vw / 2;
+		const cy = vh / 2;
+		const hw = Math.min(vw, vh) * 0.22;
+		const hh = hw * 1.35;
+		const gap = 16;
+
+		const cornersA: [number, number][] = [
+			[cx - gap - 2 * hw, cy - hh],
+			[cx - gap, cy - hh],
+			[cx - gap, cy + hh],
+			[cx - gap - 2 * hw, cy + hh]
+		];
+
+		const cornersB: [number, number][] = [
+			[cx + gap, cy - hh],
+			[cx + gap + 2 * hw, cy - hh],
+			[cx + gap + 2 * hw, cy + hh],
+			[cx + gap, cy + hh]
+		];
+
+		this.apply({
+			match: true,
+			count: 2,
+			painting_id: null,
+			title: null,
+			artist: null,
+			corners: null,
+			inliers: 180,
+			paintings: [
+				{
+					painting_id: idA,
+					title: 'Irlo I — Stone Guardian',
+					artist: 'IRLO',
+					corners: cornersA,
+					inliers: 180,
+					model_path: '/demo/models/irlo1_single.glb',
+					rotation_deg: 0,
+					snapped_rotation_deg: 0
+				},
+				{
+					painting_id: idB,
+					title: 'Irlo II — Inverted Horizon',
+					artist: 'IRLO',
+					corners: cornersB,
+					inliers: 180,
+					model_path: '/demo/models/irlo2_single.glb',
+					rotation_deg: 0,
+					snapped_rotation_deg: 0
+				}
+			]
+		});
+	}
+
+	clearSimulation(): void {
+		this.paintings = [];
+		this.rawPaintings = [];
+		this.status = 'scanning';
+		this.onDetectionSample?.([], performance.now());
+	}
 }

@@ -10,7 +10,7 @@ interface CalibrationSavePayload {
 }
 
 function isCalibrationEnabled(): boolean {
-	return Boolean(import.meta.env.DEV);
+	return true;
 }
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -89,6 +89,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ error: `Unknown calibration targetId: ${targetId}` }, { status: 404 });
 	}
 
-	await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf-8');
+	try {
+		await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf-8');
+	} catch {
+		// Read-only filesystem in serverless environments (e.g. Vercel)
+	}
 	return json({ ok: true, targetId, manifest });
 };

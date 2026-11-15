@@ -59,8 +59,8 @@
 	let uploadedModel = $state<THREE.Group | null>(null);
 	let uploadedFilename = $state<string | null>(null);
 
-	// Dev-only calibration state (tree-shaken away in production builds)
-	const isDev = import.meta.env.DEV;
+	// Dev & calibration controls (always enabled for testing on live deployment)
+	let isDev = $state(true);
 	let calibrationMode = $state(false);
 	let calibrationGestureMode = $state<CalibrationGestureMode>('rotate');
 	let calibrationTargetId = $state('irlo1');
@@ -561,8 +561,15 @@
 							: 'Painting locked'}
 					</span>
 				{:else if scanner.status === 'backend_unreachable'}
-					<span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>
-					<span>Backend unreachable…</span>
+					<button
+						type="button"
+						onclick={() => (showDebugHud = true)}
+						class="flex items-center gap-1.5 text-amber-300 hover:text-white cursor-pointer"
+						title="Tap to open Dev HUD / Simulation controls"
+					>
+						<span class="h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+						<span>Dev Mode · Tap to Test AR</span>
+					</button>
 				{:else}
 					<span class="h-2.5 w-2.5 animate-pulse rounded-full bg-sky-400"></span>
 					<span>Scan painting</span>
@@ -576,18 +583,31 @@
 				<button
 					type="button"
 					onclick={toggleCalibrationMode}
-					class="rounded-full border border-white/15 bg-zinc-950/80 px-2.5 py-1.5 text-[10px] font-semibold text-zinc-300 backdrop-blur-xl transition-colors hover:text-white"
+					class="rounded-full border px-2.5 py-1.5 text-[10px] font-semibold backdrop-blur-xl transition-colors {calibrationMode
+						? 'border-amber-400 bg-amber-500/25 text-amber-200'
+						: 'border-white/15 bg-zinc-950/80 text-zinc-300 hover:text-white'}"
 				>
 					{calibrationMode ? 'Cal: ON' : 'Cal'}
 				</button>
 				<button
 					type="button"
 					onclick={() => (showDebugHud = !showDebugHud)}
-					class="rounded-full border border-white/15 bg-zinc-950/80 px-2.5 py-1.5 text-[10px] font-semibold text-zinc-300 backdrop-blur-xl transition-colors hover:text-white"
+					class="rounded-full border px-2.5 py-1.5 text-[10px] font-semibold backdrop-blur-xl transition-colors {showDebugHud
+						? 'border-emerald-400 bg-emerald-500/25 text-emerald-200'
+						: 'border-white/15 bg-zinc-950/80 text-zinc-300 hover:text-white'}"
 				>
 					{showDebugHud ? 'HUD: ON' : 'HUD: OFF'}
 				</button>
 			{/if}
+
+			<button
+				type="button"
+				onclick={() => (isDev = !isDev)}
+				class="rounded-full border border-white/10 bg-zinc-950/80 px-2 py-1 text-[9px] font-mono text-zinc-400 backdrop-blur-xl hover:text-white"
+				title="Toggle Dev Mode"
+			>
+				{isDev ? 'DEV' : 'PROD'}
+			</button>
 
 			<CircularButton href={artistHref} ariaLabel={page.data.user ? 'Artist Dashboard' : 'Artist Login'} size="md">
 				<svg class="h-6 w-6 text-zinc-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -807,6 +827,59 @@
 				{/if}
 
 				{#if isDev}
+					<!-- Simulation & Dev Triggers (for testing on Live Deployment) -->
+					<div class="mt-2.5 border-t border-white/10 pt-2 text-[10px]">
+						<div class="mb-1.5 flex items-center justify-between font-bold text-zinc-400 uppercase tracking-wider">
+							<span>Simulate AR Target</span>
+							{#if scanner.paintings.length > 0}
+								<button
+									type="button"
+									onclick={() => scanner.clearSimulation()}
+									class="text-[9px] text-red-400 hover:underline"
+								>
+									Clear Target
+								</button>
+							{/if}
+						</div>
+						<div class="grid grid-cols-2 gap-1.5 font-sans">
+							<button
+								type="button"
+								onclick={() => scanner.simulate('irlo1', 'Irlo I — Stone Guardian', 'IRLO', '/demo/models/irlo1_single.glb')}
+								class="rounded border border-white/10 bg-zinc-800/80 px-2 py-1 text-center font-medium text-zinc-200 hover:bg-zinc-700"
+							>
+								IRLO 1
+							</button>
+							<button
+								type="button"
+								onclick={() => scanner.simulate('irlo2', 'Irlo II — Inverted Horizon', 'IRLO', '/demo/models/irlo2_single.glb')}
+								class="rounded border border-white/10 bg-zinc-800/80 px-2 py-1 text-center font-medium text-zinc-200 hover:bg-zinc-700"
+							>
+								IRLO 2
+							</button>
+							<button
+								type="button"
+								onclick={() => scanner.simulate('irloAbstract1', 'IRLO Abstract I', 'IRLO', '/demo/models/irloAbstract1.glb')}
+								class="rounded border border-white/10 bg-zinc-800/80 px-2 py-1 text-center font-medium text-zinc-200 hover:bg-zinc-700"
+							>
+								Abstract 1
+							</button>
+							<button
+								type="button"
+								onclick={() => scanner.simulate('irloAbstract2', 'IRLO Abstract II', 'IRLO', '/demo/models/irloAbstract2.glb')}
+								class="rounded border border-white/10 bg-zinc-800/80 px-2 py-1 text-center font-medium text-zinc-200 hover:bg-zinc-700"
+							>
+								Abstract 2
+							</button>
+							<button
+								type="button"
+								onclick={() => scanner.simulatePair('irlo1', 'irlo2')}
+								class="col-span-2 rounded border border-emerald-500/35 bg-emerald-950/40 px-2 py-1.5 text-center font-bold text-emerald-300 hover:bg-emerald-900/50"
+							>
+								Simulate Seam Pair (IRLO 1 + 2)
+							</button>
+						</div>
+					</div>
+
 					<div class="mt-2.5 grid grid-cols-2 gap-1.5 border-t border-white/10 pt-2 text-[10px]">
 						<a
 							href="/demo-targets/printable-pair.html"
