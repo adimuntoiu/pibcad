@@ -3,6 +3,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { ArtManifest, ModelSpec } from '../manifest/types';
 import { buildNormalizedModelHierarchy } from './modelNormalization';
 
@@ -23,8 +24,9 @@ function getGltfLoader(): GLTFLoader {
 	if (!gltfLoader) {
 		gltfLoader = new GLTFLoader();
 		const draco = new DRACOLoader();
-		draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+		draco.setDecoderPath('/draco/gltf/');
 		gltfLoader.setDRACOLoader(draco);
+		gltfLoader.setMeshoptDecoder(MeshoptDecoder);
 	}
 	return gltfLoader;
 }

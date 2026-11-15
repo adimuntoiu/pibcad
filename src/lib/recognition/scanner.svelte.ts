@@ -126,15 +126,41 @@ export class PaintingScanner {
 		this.status = 'idle';
 	}
 
-	/** Resume the video after the tab comes back (iOS Safari pauses it). */
-	async resumeVideo(): Promise<void> {
-		if (this.videoEl?.paused && this.stream?.active) {
+	/**
+	 * Pauses detection looping and video playback temporarily without tearing down
+	 * the stream, e.g. when tab is minimized or temporarily blurred.
+	 */
+	pause(): void {
+		this.running = false;
+		this.abort?.abort();
+		this.abort = null;
+		if (this.videoEl && !this.videoEl.paused) {
+			this.videoEl.pause();
+		}
+	}
+
+	/**
+	 * Resumes detection looping and video playback when tab is focused again.
+	 * If the stream was terminated by the OS, it re-acquires the camera.
+	 */
+	async resume(): Promise<void> {
+		if (this.stream && this.stream.active && this.videoEl) {
+			this.running = true;
 			try {
 				await this.videoEl.play();
+				this.status = 'scanning';
+				void this.loop();
 			} catch {
-				// needs a user gesture; the user can tap Start again
+				// Needs user gesture or autoplay policy
 			}
+		} else if (this.videoEl) {
+			await this.start(this.videoEl);
 		}
+	}
+
+	/** Resume the video after the tab comes back (iOS Safari pauses it). */
+	async resumeVideo(): Promise<void> {
+		await this.resume();
 	}
 
 	private async loop(): Promise<void> {

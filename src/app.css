@@ -1,12 +1,73 @@
 @import 'tailwindcss';
+@import '@fontsource/jockey-one/index.css';
+@import '@fontsource/josefin-sans/400.css';
+@import '@fontsource/josefin-sans/600.css';
+@import '@fontsource/josefin-sans/700.css';
+
+@theme {
+	--color-brand-purple: #511A9A;
+	--color-brand-purple-dark: #3D1078;
+	--color-brand-purple-wave: #6F46A6;
+	--color-brand-accent: #6D24CB;
+	--color-brand-grey: #D9D9D9;
+	--color-brand-card: #D4D4D8;
+	--color-brand-btn: #E5E7EB;
+	--font-display: 'Jockey One', sans-serif;
+	--font-sans: 'Josefin Sans', sans-serif;
+}
 
 @layer base {
 	html,
 	body {
 		background-color: #000000;
 		color: #ffffff;
+		font-family: var(--font-sans);
 		overscroll-behavior: none;
 		-webkit-tap-highlight-color: transparent;
 		touch-action: manipulation;
+		min-height: 100dvh;
+	}
+
+	h1, h2, h3, .font-display {
+		font-family: var(--font-display);
 	}
 }
+
+/* Safe Area Inset Helpers */
+.pt-safe {
+	padding-top: max(1rem, env(safe-area-inset-top));
+}
+.pb-safe {
+	padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.pl-safe {
+	padding-left: max(1rem, env(safe-area-inset-left));
+}
+.pr-safe {
+	padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+/* Page Transition Animation */
+@keyframes pageFadeIn {
+	from {
+		opacity: 0;
+		transform: scale(0.995);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+.page-transition-frame {
+	animation: pageFadeIn 160ms cubic-bezier(0.16, 1, 0.3, 1);
+	height: 100%;
+	width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.page-transition-frame {
+		animation: none;
+	}
+}
+

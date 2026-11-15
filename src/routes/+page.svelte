@@ -20,12 +20,22 @@
 	import { evaluateAllPairSeams, type PaintingPoseFrame } from '#lib/seam/pairFrame';
 	import { computeCanvasPoseFromCorners } from '#lib/seam/poseProjection';
 	import { ARStateMachine, type ARStateSnapshot } from '#lib/state/arStateMachine';
+	import { collectionStore } from '#lib/collection/collectionStore.svelte';
+	import { StableTracker } from '#lib/collection/stableTracker';
+	import { fade } from 'svelte/transition';
+	import Logo from '#lib/components/Logo.svelte';
+	import CircularButton from '#lib/components/CircularButton.svelte';
 
 	const DEFAULT_EDGES: CanvasEdgeMap = { top: 'A', right: 'B', bottom: 'D', left: 'C' };
 
 	const scanner = new PaintingScanner();
 	const stateMachine = new ARStateMachine();
+	const stableTracker = new StableTracker({ stableDurationMs: 1500 });
 	const preloadedIds = new Set<string>();
+
+	let showSavedToast = $state(false);
+	let savedToastTitle = $state('');
+	let savedToastTimer: ReturnType<typeof setTimeout> | null = null;
 
 	let manifest = $state<ArtManifest | null>(null);
 	let manifestError = $state<string | null>(null);
@@ -39,7 +49,7 @@
 	let videoHeight = $state(0);
 
 	let show3DOverlay = $state(true);
-	let showDebugHud = $state(true);
+	let showDebugHud = $state(false);
 	let arDiagnostics = $state<ARDiagnostics | null>(null);
 	let selectedPainting = $state<TrackedPainting | null>(null);
 	let uploadedModel = $state<THREE.Group | null>(null);
@@ -316,6 +326,30 @@
 		arSnapshot = stateMachine.observe({ targets, stateKey, isCombined }, nowMs);
 	};
 
+	async function handleAutoSave(artworkId: string, primary?: TrackedPainting) {
+		const cfg = manifest ? resolveCanvasConfig(manifest, artworkId) : null;
+		const title = cfg?.name ?? primary?.title ?? artworkId;
+		const artistName = primary?.artist || manifest?.artist || 'IRLO';
+		const modelUrl = cfg?.singleModel.url ?? primary?.modelUrl ?? null;
+		const thumbUrl = `/demo/${artworkId}.jpg`;
+
+		await collectionStore.save({
+			artworkId,
+			title,
+			artistName,
+			thumbUrl,
+			modelUrl,
+			scannedAt: Date.now()
+		});
+
+		savedToastTitle = title;
+		showSavedToast = true;
+		if (savedToastTimer) clearTimeout(savedToastTimer);
+		savedToastTimer = setTimeout(() => {
+			showSavedToast = false;
+		}, 2400);
+	}
+
 	function handleFrameTick(nowMs: number) {
 		const next = stateMachine.advanceTime(nowMs);
 		if (
@@ -327,6 +361,14 @@
 		) {
 			arSnapshot = next;
 		}
+
+		// Auto-save to collection on stable tracking (~1.5s)
+		const primary = scanner.paintings[0];
+		const trackingTargetId = primary ? canonicalizeId(primary.id) : null;
+		const result = stableTracker.update(trackingTargetId, nowMs);
+		if (result.saved && result.artworkId) {
+			void handleAutoSave(result.artworkId, primary);
+		}
 	}
 
 	function stopScanner() {
@@ -337,6 +379,11 @@
 		arDiagnostics = null;
 		renderFps = 0;
 		calibrationMode = false;
+		if (savedToastTimer) {
+			clearTimeout(savedToastTimer);
+			savedToastTimer = null;
+		}
+		showSavedToast = false;
 	}
 
 	function syncVideoSize() {
@@ -345,9 +392,17 @@
 		videoHeight = video.videoHeight;
 	}
 
+	async function startScanner() {
+		if (!video) return;
+		await scanner.start(video);
+	}
+
 	function onVisibilityChange() {
-		if (document.hidden) stopScanner();
-		else void scanner.resumeVideo();
+		if (document.hidden) {
+			scanner.pause();
+		} else {
+			void scanner.resume();
+		}
 	}
 
 	function onModelUploaded(group: THREE.Group, filename: string) {
@@ -356,6 +411,7 @@
 	}
 
 	onMount(async () => {
+		void collectionStore.init();
 		try {
 			const repo = new StaticManifestRepository('/demo/manifest.json');
 			const loaded = await repo.loadManifest();
@@ -365,6 +421,10 @@
 			void preloadManifestModels(loaded);
 		} catch (err) {
 			manifestError = err instanceof Error ? err.message : 'Failed to load demo manifest';
+		}
+
+		if (video) {
+			void startScanner();
 		}
 	});
 
@@ -436,12 +496,23 @@
 		/>
 	{/if}
 
-	{#if running}
-		<header
-			class="fixed top-0 right-0 left-0 z-30 flex items-center justify-between gap-2 px-4 pt-[max(0.85rem,env(safe-area-inset-top))]"
-		>
+	<!-- Main Navigation Bar (Mockup 2) -->
+	<header
+		class="fixed top-0 right-0 left-0 z-30 flex items-center justify-between gap-2 px-4 pt-[max(1rem,env(safe-area-inset-top))]"
+	>
+		<!-- Top-Left: Saved Collection Icon Button (Mockup 2) -->
+		<CircularButton href="/saved" ariaLabel="View Saved Collection" size="md">
+			<svg class="h-6 w-6 text-zinc-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<rect x="3" y="3" width="18" height="18" rx="3" stroke-width="1.8" />
+				<path d="M3 16l5-5 4 4 5-6 4 5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+				<circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none" />
+			</svg>
+		</CircularButton>
+
+		<!-- Center Status Pill -->
+		{#if running}
 			<div
-				class="flex items-center gap-2.5 rounded-full border border-white/15 bg-zinc-950/85 px-3.5 py-2 text-xs font-medium text-white backdrop-blur-xl sm:text-sm"
+				class="hidden sm:flex items-center gap-2.5 rounded-full border border-white/15 bg-zinc-950/85 px-3.5 py-2 text-xs font-medium text-white backdrop-blur-xl"
 			>
 				{#if arSnapshot.state === 'generating'}
 					<span class="h-2.5 w-2.5 animate-ping rounded-full bg-amber-400"></span>
@@ -458,54 +529,67 @@
 					<span>Backend unreachable…</span>
 				{:else}
 					<span class="h-2.5 w-2.5 animate-pulse rounded-full bg-sky-400"></span>
-					<span>Point camera at irlo1 or irlo2</span>
+					<span>Scan painting</span>
 				{/if}
 			</div>
+		{/if}
 
-			<div class="flex items-center gap-1.5">
-				{#if isDev}
-					<button
-						type="button"
-						onclick={toggleCalibrationMode}
-						class="rounded-full border px-3 py-2 text-xs font-semibold backdrop-blur-xl transition-colors {calibrationMode
-							? 'border-amber-400/60 bg-amber-500/25 text-amber-200'
-							: 'border-white/15 bg-zinc-950/85 text-zinc-300 hover:text-white'}"
-					>
-						{calibrationMode ? 'Cal: ON' : 'Calibrate'}
-					</button>
-				{/if}
-
-				<!-- Debug HUD Toggle -->
+		<!-- Top-Right: Dev Controls + Artist Profile Icon Button (Mockup 2) -->
+		<div class="flex items-center gap-2">
+			{#if isDev}
+				<button
+					type="button"
+					onclick={toggleCalibrationMode}
+					class="rounded-full border border-white/15 bg-zinc-950/80 px-2.5 py-1.5 text-[10px] font-semibold text-zinc-300 backdrop-blur-xl transition-colors hover:text-white"
+				>
+					{calibrationMode ? 'Cal: ON' : 'Cal'}
+				</button>
 				<button
 					type="button"
 					onclick={() => (showDebugHud = !showDebugHud)}
-					class="rounded-full border px-3 py-2 text-xs font-semibold backdrop-blur-xl transition-colors {showDebugHud
-						? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
-						: 'border-white/15 bg-zinc-950/85 text-zinc-400 hover:text-white'}"
+					class="rounded-full border border-white/15 bg-zinc-950/80 px-2.5 py-1.5 text-[10px] font-semibold text-zinc-300 backdrop-blur-xl transition-colors hover:text-white"
 				>
-					HUD
+					{showDebugHud ? 'HUD: ON' : 'HUD: OFF'}
 				</button>
+			{/if}
 
-				<!-- AR 3D Toggle -->
-				<button
-					type="button"
-					onclick={() => (show3DOverlay = !show3DOverlay)}
-					class="rounded-full border px-3 py-2 text-xs font-semibold backdrop-blur-xl transition-colors {show3DOverlay
-						? 'border-sky-500/40 bg-sky-500/20 text-sky-300'
-						: 'border-white/15 bg-zinc-950/85 text-zinc-400 hover:text-white'}"
-				>
-					3D: {show3DOverlay ? 'ON' : 'OFF'}
-				</button>
+			<CircularButton href="/login" ariaLabel="Artist Portal" size="md">
+				<svg class="h-6 w-6 text-zinc-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+				</svg>
+			</CircularButton>
+		</div>
+	</header>
 
-				<button
-					type="button"
-					onclick={stopScanner}
-					class="rounded-full border border-white/15 bg-zinc-950/85 px-3.5 py-2 text-xs font-semibold text-white/90 backdrop-blur-xl active:scale-95"
-				>
-					Close
-				</button>
+	<!-- Fading "Saved" Toast Notification -->
+	{#if showSavedToast}
+		<div
+			class="pointer-events-none fixed top-20 left-1/2 z-50 -translate-x-1/2"
+			transition:fade={{ duration: 180 }}
+		>
+			<div
+				class="flex items-center gap-2.5 rounded-full border border-emerald-400/35 bg-zinc-950/90 px-4 py-2 text-xs font-semibold text-emerald-300 shadow-2xl backdrop-blur-xl"
+			>
+				<span class="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+					<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+					</svg>
+				</span>
+				<span>Saved "{savedToastTitle}"</span>
 			</div>
-		</header>
+		</div>
+	{/if}
+
+	<!-- Bottom Center: artizART Logo over Camera Feed (Mockup 2) -->
+	{#if !scanner.paintings.length}
+		<div
+			class="pointer-events-none fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2"
+		>
+			<div class="rounded-full border border-white/40 bg-white/85 px-6 py-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.18)] backdrop-blur-md">
+				<Logo accent="purple" size="md" />
+			</div>
+		</div>
+	{/if}
 
 		<!-- "Generating 3D model…" Hologram Progress Banner -->
 		{#if arSnapshot.state === 'generating'}
@@ -685,6 +769,25 @@
 				{#if manifestError}
 					<p class="mt-2 text-[10px] text-red-400">Manifest: {manifestError}</p>
 				{/if}
+
+				{#if isDev}
+					<div class="mt-2.5 grid grid-cols-2 gap-1.5 border-t border-white/10 pt-2 text-[10px]">
+						<a
+							href="/demo-targets/printable-pair.html"
+							target="_blank"
+							rel="noreferrer"
+							class="rounded border border-white/10 bg-zinc-800/80 px-2 py-1 text-center font-medium text-zinc-200 transition-colors hover:bg-zinc-700 hover:text-white"
+						>
+							Rotation Sheet
+						</a>
+						<a
+							href="/compile"
+							class="rounded border border-white/10 bg-zinc-800/80 px-2 py-1 text-center font-medium text-zinc-200 transition-colors hover:bg-zinc-700 hover:text-white"
+						>
+							Target Compiler
+						</a>
+					</div>
+				{/if}
 			</aside>
 		{/if}
 
@@ -817,64 +920,57 @@
 				/>
 			{/await}
 		{/if}
-	{:else}
-		<div class="fixed inset-0 z-40 flex items-center justify-center bg-zinc-950 px-6 text-center">
-			<div class="w-full max-w-sm rounded-3xl border border-white/15 bg-zinc-900 p-7">
-				<div class="mx-auto mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-					<span>Phase 1 · IRLO WebAR</span>
-				</div>
-				<h1 class="text-2xl font-bold text-white">Painting scanner</h1>
-				<p class="mt-2 text-sm text-zinc-400">
-					Point your camera at <code class="text-zinc-200">irlo1</code> or
-					<code class="text-zinc-200">irlo2</code> (even rotated 0°/90°/180°/270°). Real-time AR anchors manifest GLB models onto each canvas.
-				</p>
 
-				{#if scanner.status === 'permission_denied' || scanner.status === 'no_camera'}
-					<div
-						class="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-left text-xs text-red-200"
-					>
-						<p class="font-semibold text-red-100">
-							{scanner.status === 'permission_denied'
-								? 'Camera permission denied'
-								: 'Camera unavailable'}
-						</p>
-						<p class="mt-1">{scanner.errorMessage}</p>
-					</div>
-				{/if}
-
-				{#if manifestError}
-					<div class="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-left text-xs text-amber-200">
-						{manifestError}
-					</div>
-				{/if}
-
-				<button
-					type="button"
-					disabled={scanner.status === 'starting_camera'}
-					onclick={() => video && scanner.start(video)}
-					class="mt-6 w-full rounded-2xl bg-white py-3.5 text-base font-semibold text-black active:scale-[0.98] disabled:opacity-50"
-				>
-					{scanner.status === 'starting_camera' ? 'Starting camera…' : 'Start scanner'}
-				</button>
-
-				<div class="mt-4 grid grid-cols-2 gap-2 text-xs">
-					<a
-						href="/demo-targets/printable-pair.html"
-						target="_blank"
-						rel="noreferrer"
-						class="rounded-xl border border-white/10 bg-zinc-800/70 px-3 py-2.5 font-medium text-zinc-200 hover:bg-zinc-800"
-					>
-						Rotation Test Sheet
-					</a>
-					<a
-						href="/compile"
-						class="rounded-xl border border-white/10 bg-zinc-800/70 px-3 py-2.5 font-medium text-zinc-200 hover:bg-zinc-800"
-					>
-						Target Compiler
-					</a>
+	<!-- Center Camera States (When not running / needing gesture / error) -->
+	{#if !running}
+		{#if scanner.status === 'starting_camera'}
+			<div class="pointer-events-none fixed inset-0 z-20 flex items-center justify-center px-4">
+				<div class="flex items-center gap-3 rounded-full border border-white/20 bg-zinc-950/80 px-5 py-2.5 text-sm font-medium text-white shadow-2xl backdrop-blur-xl">
+					<span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-accent border-t-transparent"></span>
+					<span>Starting camera…</span>
 				</div>
 			</div>
-		</div>
+		{:else if scanner.status === 'permission_denied'}
+			<div class="fixed inset-0 z-20 flex items-center justify-center px-6">
+				<div class="w-full max-w-xs rounded-3xl border border-white/15 bg-zinc-950/90 p-6 text-center text-white shadow-2xl backdrop-blur-xl">
+					<div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 text-rose-300">
+						<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+						</svg>
+					</div>
+					<p class="font-display text-xl uppercase tracking-wide">Camera Access Needed</p>
+					<p class="mt-2 text-xs text-zinc-300">Please enable camera permission in your browser settings to scan paintings.</p>
+					<button
+						type="button"
+						onclick={startScanner}
+						class="mt-5 w-full rounded-full bg-white py-2.5 text-sm font-semibold text-black transition-transform active:scale-95"
+					>
+						Try Again
+					</button>
+				</div>
+			</div>
+		{:else if scanner.status === 'no_camera'}
+			<div class="fixed inset-0 z-20 flex items-center justify-center px-6">
+				<div class="w-full max-w-xs rounded-3xl border border-white/15 bg-zinc-950/90 p-6 text-center text-white shadow-2xl backdrop-blur-xl">
+					<p class="font-display text-xl uppercase tracking-wide">Camera Unavailable</p>
+					<p class="mt-2 text-xs text-zinc-300">{scanner.errorMessage || 'Camera API requires HTTPS on a supported device.'}</p>
+				</div>
+			</div>
+		{:else if scanner.status === 'idle'}
+			<div class="fixed inset-0 z-20 flex items-center justify-center px-4">
+				<button
+					type="button"
+					onclick={startScanner}
+					class="flex items-center gap-2.5 rounded-full bg-white px-6 py-3.5 text-base font-semibold text-black shadow-2xl transition-transform active:scale-95"
+				>
+					<svg class="h-5 w-5 text-brand-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+					</svg>
+					<span>Tap to enable camera</span>
+				</button>
+			</div>
+		{/if}
 	{/if}
 
 	<!-- 3D Full-screen Inspector & File Drop Modal -->
