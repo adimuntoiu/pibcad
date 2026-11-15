@@ -26,5 +26,12 @@
     "artist": "Mircea Popescu",
     "image": "painting_b_lunar.png",
     "model_path": "/demo/models/irlo2_single.glb"
+  },
+  {
+    "id": "art-1794735768668-0",
+    "title": "kgb",
+    "artist": "Dragos",
+    "image": "art-1794735768668-0.png",
+    "model_path": "/demo/models/default.glb"
   }
 ]

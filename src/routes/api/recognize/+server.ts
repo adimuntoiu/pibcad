@@ -168,6 +168,28 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!(file instanceof Blob)) {
 		return json({ error: 'Uploaded file must be an image' }, { status: 400 });
 	}
+
+	// 1. If running under Vercel Services or remote backend, call via bound service URL
+	const backendUrl = process.env.BACKEND_URL;
+	if (backendUrl) {
+		try {
+			const targetUrl = new URL('/api/recognize', backendUrl);
+			const forwardData = new FormData();
+			forwardData.append('file', file);
+			const res = await fetch(targetUrl, {
+				method: 'POST',
+				body: forwardData
+			});
+			const result = await res.json();
+			return json(result, { status: res.status });
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err);
+			console.error('[api/recognize] Failed to reach bound backend service:', msg);
+			// fall through to local bridge if available
+		}
+	}
+
+	// 2. Local development fallback: in-process Python child bridge
 	const bytes = new Uint8Array(await file.arrayBuffer());
 	if (bytes.byteLength === 0) {
 		return json({ error: 'Empty image file' }, { status: 400 });

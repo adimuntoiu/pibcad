@@ -226,6 +226,9 @@ export async function preloadManifestModels(manifest: ArtManifest): Promise<void
  */
 export async function resolveModelUrl(paintingId: string, customUrl?: string | null): Promise<string> {
 	if (customUrl) {
+		if (customUrl.startsWith('data:') || customUrl.startsWith('blob:')) {
+			return customUrl;
+		}
 		try {
 			const res = await fetch(customUrl, { method: 'HEAD' });
 			if (res.ok) return customUrl;

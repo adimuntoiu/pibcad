@@ -163,7 +163,7 @@ export async function createMeshyTask(
 	}
 
 	const apiKey = getMeshyApiKey();
-	const response = await fetch('https://api.meshy.ai/v2/image-to-3d', {
+	const response = await fetch('https://api.meshy.ai/openapi/v1/image-to-3d', {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${apiKey}`,
@@ -171,11 +171,12 @@ export async function createMeshyTask(
 		},
 		body: JSON.stringify({
 			image_url: imageUrl,
+			ai_model: 'meshy-4',
 			enable_pbr: true,
-			surface_mode: 'hard',
-			topology: 'triangle',
-			target_polycount: 25000,
-			should_remesh: true
+			should_remesh: true,
+			target_polycount: 30000,
+			should_texture: true,
+			target_formats: ['glb']
 		})
 	});
 
@@ -230,7 +231,7 @@ export async function getMeshyTaskStatus(taskId: string): Promise<MeshyTaskRespo
 	}
 
 	const apiKey = getMeshyApiKey();
-	const response = await fetch(`https://api.meshy.ai/v2/image-to-3d/${taskId}`, {
+	const response = await fetch(`https://api.meshy.ai/openapi/v1/image-to-3d/${taskId}`, {
 		method: 'GET',
 		headers: {
 			Authorization: `Bearer ${apiKey}`

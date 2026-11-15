@@ -39,7 +39,90 @@ _SUPABASE_ALIASES = {
         "IRLO",
         "/demo/models/irlo2_single.glb",
     ),
+    "painting-a-solar": (
+        "irlo1",
+        "Irlo I — Stone Guardian",
+        "IRLO",
+        "/demo/models/irlo1_single.glb",
+    ),
+    "painting-b-lunar": (
+        "irlo2",
+        "Irlo II — Inverted Horizon",
+        "IRLO",
+        "/demo/models/irlo2_single.glb",
+    ),
 }
+
+
+def _load_artworks_supabase(seen_ids: set[str]) -> list[tuple[dict[str, Any], np.ndarray]]:
+    """Fetch published artworks from the artist-upload pipeline (artworks + galleries tables)."""
+    # Use PostgREST inner join syntax: galleries!inner(...) ensures only artworks with a
+    # matching gallery row are returned. We filter to published galleries via galleries.status.
+    try:
+        rows = json.loads(
+            _supabase_get(
+                "/rest/v1/artworks"
+                "?select=id,title,image_path,model_path,galleries!inner(owner_id,title)"
+                "&galleries.status=eq.published"
+                "&order=created_at"
+            )
+        )
+    except Exception as e:
+        logger.warning("Could not load artworks table (%s); skipping artist uploads", e)
+        return []
+
+    out: list[tuple[dict[str, Any], np.ndarray]] = []
+    for row in rows:
+        raw_id = str(row.get("id") or "")
+        image_path = str(row.get("image_path") or "").lstrip("/")
+        model_path = str(row.get("model_path") or "")
+        if not raw_id or not image_path:
+            continue
+        if raw_id in seen_ids:
+            continue
+        # image_path may be a full URL (Supabase public URL) or a relative storage path
+        if image_path.startswith("http"):
+            try:
+                req = urllib.request.Request(image_path)
+                with urllib.request.urlopen(req, timeout=settings.supabase_timeout_s) as resp:
+                    data = resp.read()
+            except Exception as e:
+                logger.warning("Could not download artwork image %s: %s", image_path, e)
+                continue
+        else:
+            try:
+                data = _supabase_get(
+                    f"/storage/v1/object/artwork-images/{urllib.parse.quote(image_path)}"
+                )
+            except urllib.error.HTTPError as e:
+                logger.warning("Artwork image %s not in bucket (HTTP %s)", image_path, e.code)
+                continue
+
+        bgr = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        if bgr is None:
+            logger.warning("Could not decode artwork image %s", image_path)
+            continue
+
+        gallery_info = row.get("galleries")
+        # Skip artworks whose gallery is not published (gallery would be None/null if status filter excluded it)
+        if not gallery_info:
+            continue
+        if isinstance(gallery_info, list):
+            # PostgREST may return a list for to-many relationships
+            gallery_info = gallery_info[0] if gallery_info else None
+            if not gallery_info:
+                continue
+        artist_name = gallery_info.get("title") or ""
+        item = {
+            "id": raw_id,
+            "title": row.get("title") or "",
+            "artist": artist_name,
+            "model_path": model_path,
+        }
+        seen_ids.add(raw_id)
+        out.append((item, bgr))
+        logger.info("Indexed artist artwork: %s (%s)", item["title"], raw_id)
+    return out
 
 
 def _load_catalog_supabase() -> list[tuple[dict[str, Any], np.ndarray]]:
@@ -85,6 +168,16 @@ def _load_catalog_supabase() -> list[tuple[dict[str, Any], np.ndarray]]:
             }
         seen_ids.add(item["id"])
         out.append((item, bgr))
+
+    # Also load published artist artworks from the artist-upload pipeline
+    artist_entries = _load_artworks_supabase(seen_ids)
+    out.extend(artist_entries)
+    logger.info(
+        "Loaded %d demo paintings + %d artist artworks from Supabase",
+        len(out) - len(artist_entries),
+        len(artist_entries),
+    )
+
     if not out:
         raise RuntimeError("Supabase returned no usable paintings")
     return out
@@ -108,13 +201,30 @@ def _load_catalog_local() -> list[tuple[dict[str, Any], np.ndarray]]:
 
 
 def _load_catalog() -> tuple[str, list[tuple[dict[str, Any], np.ndarray]]]:
-    """Supabase when configured, local files otherwise (and as fallback on any error)."""
+    """Load catalog from Supabase when configured, and merge with any local/synced paintings."""
+    out: list[tuple[dict[str, Any], np.ndarray]] = []
+    seen_ids: set[str] = set()
+    source = "local"
     if settings.supabase_enabled:
         try:
-            return "supabase", _load_catalog_supabase()
-        except Exception as e:  # network/auth/schema errors -> keep the app working
+            _, supa_items = "supabase", _load_catalog_supabase()
+            for it, bgr in supa_items:
+                seen_ids.add(it["id"])
+                out.append((it, bgr))
+            source = "supabase"
+        except Exception as e:
             logger.error("Supabase load failed (%s); falling back to local catalog", e)
-    return "local", _load_catalog_local()
+
+    try:
+        local_items = _load_catalog_local()
+        for it, bgr in local_items:
+            if it["id"] not in seen_ids:
+                seen_ids.add(it["id"])
+                out.append((it, bgr))
+    except Exception as e:
+        logger.warning("Local catalog load note: %s", e)
+
+    return source, out
 
 
 def _resize_long_side(img: np.ndarray, max_side: int) -> tuple[np.ndarray, float]:

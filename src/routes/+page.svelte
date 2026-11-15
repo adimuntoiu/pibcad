@@ -74,8 +74,8 @@
 
 	const running = $derived(
 		scanner.status === 'scanning' ||
-			(scanner.status as string) === 'detected' ||
-			(scanner.status as string) === 'recognized' ||
+			scanner.status === 'detected' ||
+			scanner.status === 'recognized' ||
 			scanner.status === 'backend_unreachable'
 	);
 
@@ -553,7 +553,7 @@
 				{#if arSnapshot.state === 'generating'}
 					<span class="h-2.5 w-2.5 animate-ping rounded-full bg-amber-400"></span>
 					<span>Generating 3D model…</span>
-				{:else if (scanner.status as string) === 'detected' || (scanner.status as string) === 'recognized' || arSnapshot.isHolding}
+				{:else if scanner.status === 'detected' || scanner.status === 'recognized' || arSnapshot.isHolding}
 					<span class="h-2.5 w-2.5 rounded-full {arSnapshot.isHolding ? 'bg-amber-400' : 'bg-emerald-400'}"></span>
 					<span>
 						{scanner.paintings.length > 1
@@ -786,16 +786,16 @@
 									<span class="text-zinc-400">{rep.units}</span>
 								</div>
 								<div class="text-zinc-300">
-									rawSize: [{rep.rawSize.map((v) => v.toFixed(3)).join(', ')}]
+									rawSize: [{rep.rawSize.map((v: number) => v.toFixed(3)).join(', ')}]
 								</div>
 								<div class="text-zinc-400">
-									rawCenter: [{rep.rawCenter.map((v) => v.toFixed(3)).join(', ')}]
+									rawCenter: [{rep.rawCenter.map((v: number) => v.toFixed(3)).join(', ')}]
 								</div>
 								<div class="text-amber-300">
-									originRelBox: [{rep.originRelativeToBox.map((v) => v.toFixed(2)).join(', ')}]
+									originRelBox: [{rep.originRelativeToBox.map((v: number) => v.toFixed(2)).join(', ')}]
 								</div>
 								<div class="text-emerald-300">
-									normSize: [{rep.normalizedSize.map((v) => v.toFixed(3)).join(', ')}] ({rep.mode}/{rep.pivot}/{rep.axisConvention})
+									normSize: [{rep.normalizedSize.map((v: number) => v.toFixed(3)).join(', ')}] ({rep.mode}/{rep.pivot}/{rep.axisConvention})
 								</div>
 							</div>
 						{/each}

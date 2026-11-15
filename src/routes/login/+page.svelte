@@ -184,6 +184,18 @@
 					{#if mode === 'login'}
 						<PillButton
 							type="button"
+							variant="purple"
+							onclick={() => {
+								email = 'artist@artizart.com';
+								password = 'password123';
+							}}
+							class="w-64 text-xs font-semibold"
+						>
+							FILL ARTIST CREDENTIALS
+						</PillButton>
+
+						<PillButton
+							type="button"
 							variant="white"
 							onclick={() => {
 								mode = 'signup';

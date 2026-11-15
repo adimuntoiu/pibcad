@@ -197,10 +197,15 @@ export const galleryService = {
 			return getLocalGalleries().filter((g) => g.owner_id === ownerId || g.owner_id === 'demo-artist-uuid');
 		}
 
-		return (galleries || []).map((g) => ({
+		const remote = (galleries || []).map((g) => ({
 			...g,
 			artworks: (g.artworks || []).sort((a: GalleryArtwork, b: GalleryArtwork) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 		}));
+		if (remote.length === 0) {
+			const local = getLocalGalleries().filter((g) => g.owner_id === ownerId || g.owner_id === 'demo-artist-uuid');
+			if (local.length > 0) return local;
+		}
+		return remote;
 	},
 
 	/**
@@ -262,6 +267,13 @@ export const galleryService = {
 				(a: GalleryArtwork, b: GalleryArtwork) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
 			);
 			remoteList.push(...sorted);
+		}
+		const localList = extractLocalPublished();
+		const seenIds = new Set(remoteList.map((a) => a.id));
+		for (const l of localList) {
+			if (!seenIds.has(l.id)) {
+				remoteList.push(l);
+			}
 		}
 		return remoteList;
 	},
@@ -338,6 +350,31 @@ export const galleryService = {
 		status: 'draft' | 'published';
 		artworks: GalleryArtwork[];
 	}): Promise<GalleryWithArtworks> {
+		// 1. Try server-side save API in browser environment (inserts into Supabase tables `galleries` & `artworks`)
+		if (typeof window !== 'undefined') {
+			try {
+				const res = await fetch('/api/gallery/save', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(params)
+				});
+				if (res.ok) {
+					const result = await res.json();
+					if (result.gallery) {
+						const all = getLocalGalleries();
+						const idx = all.findIndex((g) => g.id === result.gallery.id);
+						if (idx >= 0) all[idx] = result.gallery;
+						else all.unshift(result.gallery);
+						saveLocalGalleries(all);
+						return result.gallery;
+					}
+				}
+			} catch (err) {
+				console.warn('[saveGallery] Server-side save endpoint failed, using fallback:', err);
+			}
+		}
+
+		// 2. Direct client-side or local fallback
 		if (isPlaceholderClient()) {
 			const all = getLocalGalleries();
 			const id = params.id || `gallery-${Date.now()}`;
@@ -445,6 +482,28 @@ export const galleryService = {
 		filePath: string,
 		file: Blob | File
 	): Promise<string> {
+		// 1. Try server-side upload API first in browser (uses service role, guaranteed to succeed in Supabase Storage)
+		if (typeof window !== 'undefined') {
+			try {
+				const fd = new FormData();
+				fd.append('file', file);
+				fd.append('bucket', bucket);
+				fd.append('filePath', filePath);
+
+				const res = await fetch('/api/gallery/upload', {
+					method: 'POST',
+					body: fd
+				});
+
+				if (res.ok) {
+					const json = await res.json();
+					if (json.publicUrl) return json.publicUrl;
+				}
+			} catch (apiErr) {
+				console.warn('[uploadStorageFile] API upload fallback:', apiErr);
+			}
+		}
+
 		if (isPlaceholderClient()) {
 			// For artwork images in local/demo mode, convert to a persistent Data URL when possible
 			// so images survive page reloads and can be sent to the FastAPI recognition backend.

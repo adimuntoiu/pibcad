@@ -97,6 +97,70 @@
   ],
   "seamRules": [
     {
+      "id": "seam-AD",
+      "canvasAId": "irlo1",
+      "canvasBId": "irlo2",
+      "edgeA": "A",
+      "edgeB": "D",
+      "combinedModel": {
+        "url": "/demo/models/combined_AA.glb",
+        "mode": "overlay",
+        "scale": 1,
+        "fitDimension": "width",
+        "fitFraction": 2,
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          -180
+        ],
+        "axisConvention": "yUp",
+        "flip": [
+          false,
+          false,
+          false
+        ],
+        "pivot": "front",
+        "depthScale": 1
+      }
+    },
+    {
+      "id": "seam-DA",
+      "canvasAId": "irlo1",
+      "canvasBId": "irlo2",
+      "edgeA": "D",
+      "edgeB": "C",
+      "combinedModel": {
+        "url": "/demo/models/combined_AA.glb",
+        "mode": "overlay",
+        "scale": 1,
+        "fitDimension": "width",
+        "fitFraction": 2,
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          -180
+        ],
+        "axisConvention": "yUp",
+        "flip": [
+          false,
+          false,
+          false
+        ],
+        "pivot": "front",
+        "depthScale": 1
+      }
+    },
+    {
       "id": "seam-AA",
       "canvasAId": "irlo1",
       "canvasBId": "irlo2",
