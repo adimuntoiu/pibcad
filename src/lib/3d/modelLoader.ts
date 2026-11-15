@@ -8,6 +8,12 @@ import { buildNormalizedModelHierarchy } from './modelNormalization';
 
 const cache = new Map<string, THREE.Group>();
 const inFlight = new Map<string, Promise<THREE.Group>>();
+
+/** Clears cached 3D model groups and in-flight promises. */
+export function clearModelCache(): void {
+	cache.clear();
+	inFlight.clear();
+}
 const objLoader = new OBJLoader();
 const mtlLoader = new MTLLoader();
 

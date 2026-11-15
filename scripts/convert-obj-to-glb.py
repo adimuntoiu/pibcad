@@ -75,13 +75,13 @@ def find_texture_file(tex_name: str | None, obj_path: Path) -> Path | None:
     return None
 
 
-def encode_texture_jpeg(tex_path: Path, max_dim: int = 1024) -> bytes:
+def encode_texture_jpeg(tex_path: Path, max_dim: int = 2048) -> bytes:
     with Image.open(tex_path) as im:
         im = im.convert("RGB")
         if max(im.size) > max_dim:
             im.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
         buf = io.BytesIO()
-        im.save(buf, format="JPEG", quality=88, optimize=True)
+        im.save(buf, format="JPEG", quality=92, optimize=True)
         return buf.getvalue()
 
 
@@ -213,11 +213,9 @@ def _voxel_decimate_group(
     aspect = span / float(np.max(span))
     # Roughly estimate cell count along longest axis based on reduction ratio
     ratio = np.sqrt(max_tris / float(n_tris))
-    # Empirical multiplier: a dense shell surface (~1.2M verts) fills ~20-30% of 2D projection
-    grid_long = int(np.clip(round(190.0 * np.sqrt(max_tris / 75000.0)), 48, 360))
-    # If vertex density is uniform volume or double-sided shell, tune conservatively
+    grid_long = int(np.clip(round(250.0 * np.sqrt(max_tris / 120000.0)), 64, 420))
     if ratio < 0.25:
-        grid_long = min(grid_long, 155)
+        grid_long = min(grid_long, 280)
 
     nx = max(12, int(round(grid_long * aspect[0])))
     ny = max(12, int(round(grid_long * aspect[1])))
@@ -277,7 +275,7 @@ def _voxel_decimate_group(
     return cell_pos, kept_fv, kept_fvt, kept_fvn
 
 
-def obj_to_glb(obj_path: Path, glb_path: Path, max_tris: int = 75000) -> None:
+def obj_to_glb(obj_path: Path, glb_path: Path, max_tris: int = 125000) -> None:
     arr_v, arr_vt, arr_vn, packed_groups, mtl_info = _parse_obj_fast(obj_path)
 
     # Normalize overall object into canvas-width units: center X/Y, max(W, H) = 1.0, min.z = 0.0

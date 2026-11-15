@@ -109,9 +109,9 @@
         "fitDimension": "width",
         "fitFraction": 2,
         "offset": [
-          0.075,
-          0.005,
-          0.045
+          0,
+          0,
+          0
         ],
         "rotation": [
           0,
@@ -199,7 +199,7 @@
       "edgeA": "D",
       "edgeB": "D",
       "combinedModel": {
-        "url": "/demo/models/combined_DD.glb",
+        "url": "/demo/models/combined_DD_v2.glb",
         "mode": "overlay",
         "scale": 1,
         "fitDimension": "width",
