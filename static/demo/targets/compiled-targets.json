@@ -1,5 +1,5 @@
 {
-  "compiledAt": "2026-11-14T16:20:51.370Z",
+  "compiledAt": "2026-11-15T00:23:02.745Z",
   "engine": "asift-rootsift-homography-v1",
   "rotationStepsDeg": [
     0,
@@ -17,21 +17,11 @@
       ],
       "imageTargetUrl": "/demo/irlo1.jpg",
       "verified": true,
-      "fileSizeBytes": 43668,
+      "fileSizeBytes": 2008069,
       "rotations": [
         {
           "targetKey": "irlo1_rot0",
           "rotationDeg": 0,
-          "edges": {
-            "top": "A",
-            "right": "B",
-            "bottom": "D",
-            "left": "C"
-          }
-        },
-        {
-          "targetKey": "irlo1_rot90",
-          "rotationDeg": 90,
           "edges": {
             "top": "C",
             "right": "A",
@@ -40,8 +30,8 @@
           }
         },
         {
-          "targetKey": "irlo1_rot180",
-          "rotationDeg": 180,
+          "targetKey": "irlo1_rot90",
+          "rotationDeg": 90,
           "edges": {
             "top": "D",
             "right": "C",
@@ -50,13 +40,23 @@
           }
         },
         {
-          "targetKey": "irlo1_rot270",
-          "rotationDeg": 270,
+          "targetKey": "irlo1_rot180",
+          "rotationDeg": 180,
           "edges": {
             "top": "B",
             "right": "D",
             "bottom": "C",
             "left": "A"
+          }
+        },
+        {
+          "targetKey": "irlo1_rot270",
+          "rotationDeg": 270,
+          "edges": {
+            "top": "A",
+            "right": "B",
+            "bottom": "D",
+            "left": "C"
           }
         }
       ]
@@ -70,45 +70,45 @@
       ],
       "imageTargetUrl": "/demo/irlo2.jpg",
       "verified": true,
-      "fileSizeBytes": 49775,
+      "fileSizeBytes": 1989466,
       "rotations": [
         {
           "targetKey": "irlo2_rot0",
           "rotationDeg": 0,
           "edges": {
             "top": "A",
-            "right": "B",
-            "bottom": "D",
-            "left": "C"
+            "right": "C",
+            "bottom": "B",
+            "left": "D"
           }
         },
         {
           "targetKey": "irlo2_rot90",
           "rotationDeg": 90,
           "edges": {
-            "top": "C",
+            "top": "D",
             "right": "A",
-            "bottom": "B",
-            "left": "D"
+            "bottom": "C",
+            "left": "B"
           }
         },
         {
           "targetKey": "irlo2_rot180",
           "rotationDeg": 180,
           "edges": {
-            "top": "D",
-            "right": "C",
+            "top": "B",
+            "right": "D",
             "bottom": "A",
-            "left": "B"
+            "left": "C"
           }
         },
         {
           "targetKey": "irlo2_rot270",
           "rotationDeg": 270,
           "edges": {
-            "top": "B",
-            "right": "D",
-            "bottom": "C",
+            "top": "C",
+            "right": "B",
+            "bottom": "D",
             "left": "A"
           }
         }

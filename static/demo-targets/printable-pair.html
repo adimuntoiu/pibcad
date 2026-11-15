@@ -164,10 +164,10 @@
 	</head>
 	<body>
 		<div class="toolbar">
-			<button class="valid" onclick="setPreset('AA')">Set AA (irlo1 90° / irlo2 270°)</button>
-			<button class="valid" onclick="setPreset('BB')">Set BB (irlo1 0° / irlo2 90°)</button>
-			<button class="valid" onclick="setPreset('CC')">Set CC (irlo2 0° / irlo1 0°)</button>
-			<button class="valid" onclick="setPreset('DD')">Set DD (irlo2 180° / irlo1 90°)</button>
+			<button class="valid" onclick="setPreset('AA')">Set AA (irlo1 0° / irlo2 270°)</button>
+			<button class="valid" onclick="setPreset('BB')">Set BB (irlo1 270° / irlo2 90°)</button>
+			<button class="valid" onclick="setPreset('CC')">Set CC (irlo1 90° / irlo2 180°)</button>
+			<button class="valid" onclick="setPreset('DD')">Set DD (irlo1 180° / irlo2 0°)</button>
 			<button onclick="toggleSwap()" id="swapBtn">Swap Order (irlo1 | irlo2)</button>
 			<button onclick="setPair(0, 0)">Reset Rotations (0° / 0°)</button>
 			<label class="gap-ctrl">
@@ -177,16 +177,16 @@
 		</div>
 
 		<div id="pairStatus" class="status-pill bad">
-			Facing: B ↔ C · Incompatible (Individual models)
+			Facing: A ↔ D · Incompatible (Individual models)
 		</div>
 
 		<div id="pairStage" class="pair-stage">
 			<div class="canvas-card" id="cardContainer1">
 				<div class="frame-wrap">
-					<div class="edge-lbl edge-top" id="lbl1Top">A</div>
-					<div class="edge-lbl edge-right" id="lbl1Right">B</div>
-					<div class="edge-lbl edge-bot" id="lbl1Bot">D</div>
-					<div class="edge-lbl edge-left" id="lbl1Left">C</div>
+					<div class="edge-lbl edge-top" id="lbl1Top">C</div>
+					<div class="edge-lbl edge-right" id="lbl1Right">A</div>
+					<div class="edge-lbl edge-bot" id="lbl1Bot">B</div>
+					<div class="edge-lbl edge-left" id="lbl1Left">D</div>
 					<div id="canvas1" class="fiducial-frame" onclick="rotateCard(1)">
 						<img src="/demo/irlo1.jpg" alt="irlo1" />
 					</div>
@@ -210,7 +210,7 @@
 
 		<script>
 			const rot = { 1: 0, 2: 0 };
-			const ring1 = ['A', 'B', 'D', 'C'];
+			const ring1 = ['C', 'A', 'B', 'D'];
 			const ring2 = ['A', 'C', 'B', 'D'];
 			let gapRatioPct = 6;
 			let isSwapped = false; // false = irlo1 left, true = irlo2 left
@@ -274,18 +274,15 @@
 			}
 
 			function setPreset(kind) {
+				if (isSwapped) toggleSwap();
 				if (kind === 'AA') {
-					if (isSwapped) toggleSwap();
-					setPair(90, 270);
+					setPair(0, 270);
 				} else if (kind === 'BB') {
-					if (isSwapped) toggleSwap();
-					setPair(0, 90);
+					setPair(270, 90);
 				} else if (kind === 'CC') {
-					if (!isSwapped) toggleSwap(); // irlo2 left (0°), irlo1 right (0°)
-					setPair(0, 0);
-				} else if (kind === 'DD') {
-					if (!isSwapped) toggleSwap(); // irlo2 left (180°), irlo1 right (90°)
 					setPair(90, 180);
+				} else if (kind === 'DD') {
+					setPair(180, 0);
 				}
 			}
 

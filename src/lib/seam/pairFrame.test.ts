@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { ArtManifest } from '../manifest/types';
 import {
+	determineFacingSidesFromCorners,
 	evaluateAllPairSeams,
 	evaluatePairSeam,
 	type PaintingPoseFrame
@@ -15,7 +16,7 @@ const TEST_MANIFEST: ArtManifest = {
 			id: 'irlo1',
 			name: 'IRLO I',
 			imageTargetUrl: '/demo/irlo1.jpg',
-			edges: { top: 'A', right: 'B', bottom: 'D', left: 'C' },
+			edges: { top: 'C', right: 'A', bottom: 'B', left: 'D' },
 			singleModel: { url: '/demo/models/irlo1_single.glb' }
 		},
 		{
@@ -29,7 +30,7 @@ const TEST_MANIFEST: ArtManifest = {
 			id: 'irlo3',
 			name: 'IRLO III (Tile)',
 			imageTargetUrl: '/demo/irlo1.jpg',
-			edges: { top: 'A', right: 'B', bottom: 'D', left: 'C' },
+			edges: { top: 'C', right: 'A', bottom: 'B', left: 'D' },
 			singleModel: { url: '/demo/models/irlo1_single.glb' }
 		}
 	],
@@ -89,10 +90,10 @@ function cwRotQuat(deg: number): THREE.Quaternion {
 describe('evaluatePairSeam', () => {
 	it('evaluates all 16 orientation combinations (4 valid, 12 invalid) accurately', () => {
 		const validExpected = new Map<string, { edge: string; key: string }>([
-			['90,270', { edge: 'A', key: 'seam-AA' }],
-			['0,90', { edge: 'B', key: 'seam-BB' }],
-			['180,180', { edge: 'C', key: 'seam-CC' }],
-			['270,0', { edge: 'D', key: 'seam-DD' }]
+			['0,270', { edge: 'A', key: 'seam-AA' }],
+			['270,90', { edge: 'B', key: 'seam-BB' }],
+			['90,180', { edge: 'C', key: 'seam-CC' }],
+			['180,0', { edge: 'D', key: 'seam-DD' }]
 		]);
 
 		let validCount = 0;
@@ -147,10 +148,10 @@ describe('evaluatePairSeam', () => {
 	});
 
 	it('is invariant to global orientation (vertical stack & 37° diagonal wall angle)', () => {
-		// Base AA pair: irlo1 (-0.55, 0) at 90° CW, irlo2 (+0.55, 0) at 270° CW
+		// Base AA pair: irlo1 (-0.55, 0) at 0° CW, irlo2 (+0.55, 0) at 270° CW
 		const basePosA = new THREE.Vector3(-0.55, 0, 0);
 		const basePosB = new THREE.Vector3(0.55, 0, 0);
-		const baseQuatA = cwRotQuat(90);
+		const baseQuatA = cwRotQuat(0);
 		const baseQuatB = cwRotQuat(270);
 
 		for (const worldAngleDeg of [90, 37, -142]) {
@@ -188,7 +189,7 @@ describe('evaluatePairSeam', () => {
 				{
 					id: 'irlo1',
 					position: new THREE.Vector3(-halfCenterDist, 0, -2),
-					quaternion: cwRotQuat(90),
+					quaternion: cwRotQuat(0),
 					scale: 1.0
 				},
 				{
@@ -227,7 +228,7 @@ describe('evaluatePairSeam', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, -0.09, -2),
-				quaternion: cwRotQuat(90),
+				quaternion: cwRotQuat(0),
 				scale: 1.0
 			},
 			{
@@ -246,7 +247,7 @@ describe('evaluatePairSeam', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, -0.21, -2),
-				quaternion: cwRotQuat(90),
+				quaternion: cwRotQuat(0),
 				scale: 1.0
 			},
 			{
@@ -290,7 +291,7 @@ describe('evaluatePairSeam', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, 0, -2),
-				quaternion: cwRotQuat(90),
+				quaternion: cwRotQuat(0),
 				scale: 1.0
 			},
 			{
@@ -312,7 +313,7 @@ describe('evaluatePairSeam', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, 0, -2),
-				quaternion: cwRotQuat(90),
+				quaternion: cwRotQuat(0),
 				scale: 1.0
 			},
 			{
@@ -331,7 +332,7 @@ describe('evaluatePairSeam', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, 0, -2),
-				quaternion: cwRotQuat(90),
+				quaternion: cwRotQuat(0),
 				scale: 1.0
 			},
 			{
@@ -360,7 +361,7 @@ describe('evaluateAllPairSeams', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, 0, -2),
-				quaternion: cwRotQuat(90),
+				quaternion: cwRotQuat(0),
 				scale: 1.0
 			},
 			{
@@ -397,295 +398,151 @@ describe('evaluateAllPairSeams', () => {
 			}>;
 		}
 
-		const COMPOSITE_DETECTIONS: Record<string, CompositeDetectionCase> = {
-			'irloAA.jpeg_normal': {
-				w: 3990,
-				h: 1969,
+const COMPOSITE_DETECTIONS: Record<string, CompositeDetectionCase> = {
+			"irloAA.jpeg_normal": {
+				w: 3960,
+				h: 1980,
 				paintings: [
 					{
-						id: 'irlo2',
+						id: "irlo1",
+						rot: 0,
+						corners: [[0.0004, 0.0011], [0.5002, -0.0007], [0.5004, 1.0009], [0.0002, 0.9999]],
+						pose: {"position": [-0.4997, -0.0001, -1.0716], "quaternion": [-0.00038, -0.00109, 0.00019, 1.0], "normal": [-0.0022, 0.0008, 1.0]}
+					},
+					{
+						id: "irlo2",
 						rot: 270,
-						corners: [
-							[0.4997, 1.0069],
-							[0.4998, -0.0091],
-							[1.0012, -0.0094],
-							[1.0011, 1.0066]
-						],
-						pose: {
-							position: [0.4999, 0.0011, -1.0544],
-							quaternion: [-0.00049, -0.0008, 0.70715, 0.70706],
-							normal: [-0.0018, -0.0004, 1.0]
-						}
+						corners: [[0.5002, 0.9969], [0.4999, -0.0028], [1.0004, -0.003], [1.0002, 0.9969]],
+						pose: {"position": [0.5002, 0.0028, -1.0723], "quaternion": [1e-05, -0.00048, 0.70719, 0.70702], "normal": [-0.0007, -0.0007, 1.0]}
 					},
-					{
-						id: 'irlo1',
-						rot: 90,
-						corners: [
-							[0.4976, -0.0039],
-							[0.4984, 1.011],
-							[-0.0035, 1.0109],
-							[-0.0032, -0.0045]
-						],
-						pose: {
-							position: [-0.5046, -0.0031, -1.0551],
-							quaternion: [-0.00133, 0.00059, -0.707, 0.70721],
-							normal: [0.0027, 0.0011, 1.0]
-						}
-					}
 				]
 			},
-			'irloAA.jpeg_mirrored': {
-				w: 3990,
-				h: 1969,
+			"irloAA.jpeg_mirrored": {
+				w: 3960,
+				h: 1980,
 				paintings: [
 					{
-						id: 'irlo2',
+						id: "irlo1",
+						rot: 0,
+						corners: [[0.997, 0.0012], [0.4971, -0.0006], [0.497, 1.0009], [0.9973, 0.9998]],
+						pose: {"position": [-0.4996, -0.0001, -1.0716], "quaternion": [-0.00044, -0.00105, 0.00014, 1.0], "normal": [-0.0021, 0.0009, 1.0]}
+					},
+					{
+						id: "irlo2",
 						rot: 270,
-						corners: [
-							[0.4977, 1.0069],
-							[0.4976, -0.0092],
-							[-0.0039, -0.0096],
-							[-0.0037, 1.0066]
-						],
-						pose: {
-							position: [0.4999, 0.0012, -1.0543],
-							quaternion: [-0.0005, -0.0008, 0.70714, 0.70707],
-							normal: [-0.0018, -0.0004, 1.0]
-						}
+						corners: [[0.4971, 0.997], [0.4975, -0.0025], [-0.003, -0.0031], [-0.0028, 0.9968]],
+						pose: {"position": [0.5002, 0.0027, -1.0724], "quaternion": [8e-05, -0.00069, 0.7073, 0.70691], "normal": [-0.0009, -0.0011, 1.0]}
+					},
+				]
+			},
+			"irloBB.jpeg_normal": {
+				w: 3960,
+				h: 1980,
+				paintings: [
+					{
+						id: "irlo1",
+						rot: 270,
+						corners: [[0.0007, 0.9963], [-0.0003, -0.0033], [0.5005, -0.0031], [0.4998, 0.9972]],
+						pose: {"position": [-0.4998, 0.0025, -1.0723], "quaternion": [0.00082, -0.00128, 0.70682, 0.7074], "normal": [-0.0006, -0.003, 1.0]}
 					},
 					{
-						id: 'irlo1',
+						id: "irlo2",
 						rot: 90,
-						corners: [
-							[0.4999, -0.0039],
-							[0.499, 1.0111],
-							[1.0009, 1.011],
-							[1.0006, -0.0045]
-						],
-						pose: {
-							position: [-0.5046, -0.0031, -1.0551],
-							quaternion: [-0.00135, 0.00053, -0.70699, 0.70722],
-							normal: [0.0027, 0.0012, 1.0]
-						}
-					}
+						corners: [[0.9986, 0.0004], [0.9985, 1.0005], [0.4985, 1.0002], [0.4988, 0.0004]],
+						pose: {"position": [0.4972, -0.0004, -1.0724], "quaternion": [-0.0, -9e-05, -0.7072, 0.70701], "normal": [-0.0001, 0.0001, 1.0]}
+					},
 				]
 			},
-			'irloBB.jpeg_normal': {
-				w: 4000,
-				h: 1989,
+			"irloBB.jpeg_mirrored": {
+				w: 3960,
+				h: 1980,
 				paintings: [
 					{
-						id: 'irlo2',
+						id: "irlo1",
+						rot: 270,
+						corners: [[0.9967, 0.9963], [0.9977, -0.0033], [0.4969, -0.0029], [0.4976, 0.9971]],
+						pose: {"position": [-0.4998, 0.0025, -1.0724], "quaternion": [0.001, -0.00116, 0.7068, 0.70741], "normal": [-0.0002, -0.0031, 1.0]}
+					},
+					{
+						id: "irlo2",
 						rot: 90,
-						corners: [
-							[0.9992, -0.0009],
-							[0.9988, 1.0049],
-							[0.499, 1.005],
-							[0.4992, -0.0009]
-						],
-						pose: {
-							position: [0.498, -0.0022, -1.0663],
-							quaternion: [2e-5, 0.00045, -0.70712, 0.70709],
-							normal: [0.0006, -0.0007, 1.0]
-						}
+						corners: [[-0.0011, 0.0007], [-0.0011, 1.0003], [0.4989, 1.0001], [0.4987, 0.0003]],
+						pose: {"position": [0.4972, -0.0003, -1.0725], "quaternion": [-0.00012, -9e-05, -0.70722, 0.707], "normal": [0.0, 0.0003, 1.0]}
 					},
-					{
-						id: 'irlo1',
-						rot: 0,
-						corners: [
-							[0.0005, -0.0006],
-							[0.5004, -0.0012],
-							[0.5003, 1.0047],
-							[0.0004, 1.005]
-						],
-						pose: {
-							position: [-0.4992, -0.0018, -1.0663],
-							quaternion: [-0.00027, -0.00032, 0.00012, 1.0],
-							normal: [-0.0006, 0.0005, 1.0]
-						}
-					}
 				]
 			},
-			'irloBB.jpeg_mirrored': {
-				w: 4000,
-				h: 1989,
+			"irloCC.jpeg_normal": {
+				w: 3960,
+				h: 1980,
 				paintings: [
 					{
-						id: 'irlo2',
+						id: "irlo1",
 						rot: 90,
-						corners: [
-							[-0.0018, -0.0009],
-							[-0.0015, 1.005],
-							[0.4984, 1.0049],
-							[0.4981, -0.0007]
-						],
-						pose: {
-							position: [0.4981, -0.0022, -1.0664],
-							quaternion: [7e-5, 0.00026, -0.70716, 0.70706],
-							normal: [0.0003, -0.0005, 1.0]
-						}
+						corners: [[0.4982, 0.0008], [0.4989, 0.9999], [-0.0018, 1.0007], [-0.0014, 0.0002]],
+						pose: {"position": [-0.5029, -0.0001, -1.0726], "quaternion": [-0.00096, -0.0, -0.70693, 0.70729], "normal": [0.0014, 0.0014, 1.0]}
 					},
 					{
-						id: 'irlo1',
-						rot: 0,
-						corners: [
-							[0.9969, -0.0005],
-							[0.4969, -0.0013],
-							[0.4971, 1.0047],
-							[0.997, 1.0049]
-						],
-						pose: {
-							position: [-0.4992, -0.0019, -1.0663],
-							quaternion: [-0.00016, -0.0004, 0.00012, 1.0],
-							normal: [-0.0008, 0.0003, 1.0]
-						}
-					}
-				]
-			},
-			'irloCC.jpeg_normal': {
-				w: 3989,
-				h: 1996,
-				paintings: [
-					{
-						id: 'irlo1',
-						rot: 0,
-						corners: [
-							[0.4992, -0.0013],
-							[1.0006, -0.0025],
-							[1.0004, 1.0003],
-							[0.4993, 0.9999]
-						],
-						pose: {
-							position: [0.4984, 0.0007, -1.0702],
-							quaternion: [0.00036, -0.00071, 0.00016, 1.0],
-							normal: [-0.0014, -0.0007, 1.0]
-						}
-					},
-					{
-						id: 'irlo2',
-						rot: 0,
-						corners: [
-							[-0.0012, -0.0006],
-							[0.4998, -0.0004],
-							[0.5, 1.0017],
-							[-0.0012, 1.0013]
-						],
-						pose: {
-							position: [-0.5002, -0.0005, -1.07],
-							quaternion: [2e-5, 3e-5, -4e-5, 1.0],
-							normal: [0.0001, -0.0, 1.0]
-						}
-					}
-				]
-			},
-			'irloCC.jpeg_mirrored': {
-				w: 3989,
-				h: 1996,
-				paintings: [
-					{
-						id: 'irlo2',
-						rot: 0,
-						corners: [
-							[0.9986, -0.0006],
-							[0.4976, -0.0004],
-							[0.4973, 1.0018],
-							[0.9987, 1.0014]
-						],
-						pose: {
-							position: [-0.5002, -0.0005, -1.0699],
-							quaternion: [-9e-5, 1e-5, 1e-5, 1.0],
-							normal: [0.0, 0.0002, 1.0]
-						}
-					},
-					{
-						id: 'irlo1',
-						rot: 0,
-						corners: [
-							[0.4984, -0.0012],
-							[-0.0032, -0.0025],
-							[-0.0032, 0.9999],
-							[0.4982, 1.0002]
-						],
-						pose: {
-							position: [0.4983, 0.0007, -1.07],
-							quaternion: [0.00038, -0.00072, 0.00034, 1.0],
-							normal: [-0.0014, -0.0008, 1.0]
-						}
-					}
-				]
-			},
-			'irloDD.jpeg_normal': {
-				w: 3992,
-				h: 1978,
-				paintings: [
-					{
-						id: 'irlo2',
+						id: "irlo2",
 						rot: 180,
-						corners: [
-							[0.4988, 1.0072],
-							[-0.002, 1.0068],
-							[-0.0021, -0.0035],
-							[0.4995, -0.0032]
-						],
-						pose: {
-							position: [-0.5021, -0.002, -1.0603],
-							quaternion: [0.00083, -0.00047, 1.0, 0.00033],
-							normal: [0.0017, -0.0009, 1.0]
-						}
+						corners: [[0.9986, 0.9974], [0.4985, 0.9968], [0.4986, -0.0032], [0.9986, -0.0025]],
+						pose: {"position": [0.4971, 0.003, -1.0722], "quaternion": [-0.0, 0.00027, 1.0, 0.00025], "normal": [-0.0, 0.0005, 1.0]}
 					},
-					{
-						id: 'irlo1',
-						rot: 90,
-						corners: [
-							[0.9997, -0.0004],
-							[1.001, 1.0105],
-							[0.4991, 1.01],
-							[0.4996, -0.0011]
-						],
-						pose: {
-							position: [0.4989, -0.0039, -1.06],
-							quaternion: [-0.00086, -0.00166, -0.70736, 0.70685],
-							normal: [-0.0011, 0.0036, 1.0]
-						}
-					}
 				]
 			},
-			'irloDD.jpeg_mirrored': {
-				w: 3992,
-				h: 1978,
+			"irloCC.jpeg_mirrored": {
+				w: 3960,
+				h: 1980,
 				paintings: [
 					{
-						id: 'irlo2',
-						rot: 180,
-						corners: [
-							[0.4985, 1.0073],
-							[0.9994, 1.0068],
-							[0.9995, -0.0035],
-							[0.4979, -0.0032]
-						],
-						pose: {
-							position: [-0.5021, -0.002, -1.0603],
-							quaternion: [0.00081, -0.00041, 1.0, 0.00032],
-							normal: [0.0016, -0.0008, 1.0]
-						}
+						id: "irlo1",
+						rot: 90,
+						corners: [[0.4992, 0.0009], [0.4985, 0.9998], [0.9992, 1.0007], [0.9988, 0.0003]],
+						pose: {"position": [-0.5029, -0.0, -1.0727], "quaternion": [-0.00113, 1e-05, -0.7069, 0.70731], "normal": [0.0016, 0.0016, 1.0]}
 					},
 					{
-						id: 'irlo1',
-						rot: 90,
-						corners: [
-							[-0.0024, -0.0005],
-							[-0.0037, 1.0107],
-							[0.4983, 1.01],
-							[0.4979, -0.0011]
-						],
-						pose: {
-							position: [0.4989, -0.0039, -1.0599],
-							quaternion: [-0.00082, -0.00169, -0.70736, 0.70685],
-							normal: [-0.0012, 0.0036, 1.0]
-						}
-					}
+						id: "irlo2",
+						rot: 180,
+						corners: [[-0.0011, 0.9974], [0.4989, 0.9968], [0.4989, -0.0032], [-0.0012, -0.0026]],
+						pose: {"position": [0.497, 0.003, -1.0722], "quaternion": [-6e-05, 0.00018, 1.0, 0.00023], "normal": [-0.0001, 0.0004, 1.0]}
+					},
 				]
-			}
+			},
+			"irloDD.jpeg_normal": {
+				w: 3960,
+				h: 1980,
+				paintings: [
+					{
+						id: "irlo1",
+						rot: 180,
+						corners: [[0.4982, 0.9964], [-0.0016, 0.9981], [-0.0015, -0.0032], [0.4984, -0.0025]],
+						pose: {"position": [-0.5032, 0.0029, -1.0727], "quaternion": [0.0007, 0.00017, 1.0, -0.00012], "normal": [0.0014, 0.0003, 1.0]}
+					},
+					{
+						id: "irlo2",
+						rot: 0,
+						corners: [[0.5003, 0.0009], [1.0002, 0.0002], [1.0003, 1.0004], [0.5001, 0.9998]],
+						pose: {"position": [0.5003, -0.0003, -1.0727], "quaternion": [-0.00014, -0.00067, -4e-05, 1.0], "normal": [-0.0013, 0.0003, 1.0]}
+					},
+				]
+			},
+			"irloDD.jpeg_mirrored": {
+				w: 3960,
+				h: 1980,
+				paintings: [
+					{
+						id: "irlo1",
+						rot: 180,
+						corners: [[0.4992, 0.9964], [0.9989, 0.9981], [0.999, -0.0033], [0.499, -0.0025]],
+						pose: {"position": [-0.5032, 0.0028, -1.0728], "quaternion": [0.00071, 4e-05, 1.0, -0.0001], "normal": [0.0014, 0.0001, 1.0]}
+					},
+					{
+						id: "irlo2",
+						rot: 0,
+						corners: [[0.4973, 0.0005], [-0.0028, 0.0], [-0.0028, 1.0004], [0.4972, 0.9999]],
+						pose: {"position": [0.5003, -0.0002, -1.0725], "quaternion": [-0.0, -0.00044, 1e-05, 1.0], "normal": [-0.0009, 0.0, 1.0]}
+					},
+				]
+			},
 		};
 
 		const expectedPairCodes: Record<string, string> = {
@@ -722,11 +579,11 @@ describe('evaluateAllPairSeams', () => {
 	});
 
 	it('produces identical pairQuaternion regardless of input order and rotates 180 deg with upside-down paintings', () => {
-		// Seam AA: canonical left = irlo1 (90 deg CW), canonical right = irlo2 (270 deg CW)
+		// Seam AA: canonical left = irlo1 (0 deg CW), canonical right = irlo2 (270 deg CW)
 		const pose1: PaintingPoseFrame = {
 			id: 'irlo1',
 			position: new THREE.Vector3(-0.54, 0, -2),
-			quaternion: cwRotQuat(90),
+			quaternion: cwRotQuat(0),
 			scale: 1.0
 		};
 		const pose2: PaintingPoseFrame = {
@@ -743,7 +600,7 @@ describe('evaluateAllPairSeams', () => {
 		expect(ab.pairOrigin.distanceTo(ba.pairOrigin)).toBeLessThan(1e-5);
 		expect(Math.abs(ab.pairQuaternion.dot(ba.pairQuaternion))).toBeCloseTo(1, 5);
 
-		// Also verify swapped-seam order invariance (CC upright: canonical left = irlo2 @ 0 deg, right = irlo1 @ 0 deg)
+		// Also verify swapped-seam order invariance (CC upright: canonical left = irlo2 @ 0 deg, right = irlo1 @ 270 deg)
 		const cc2: PaintingPoseFrame = {
 			id: 'irlo2',
 			position: new THREE.Vector3(-0.54, 0, -2),
@@ -753,7 +610,7 @@ describe('evaluateAllPairSeams', () => {
 		const cc1: PaintingPoseFrame = {
 			id: 'irlo1',
 			position: new THREE.Vector3(0.54, 0, -2),
-			quaternion: cwRotQuat(0),
+			quaternion: cwRotQuat(270),
 			scale: 1.0
 		};
 		const ccForward = evaluatePairSeam(cc1, cc2, TEST_MANIFEST)!;
@@ -781,5 +638,112 @@ describe('evaluateAllPairSeams', () => {
 		expect(Math.abs(upsideDown.pairQuaternion.dot(expectedQuat180))).toBeCloseTo(1, 5);
 		// Ensure it actually rotated 180 deg relative to upright (dot ~ 0), not flipped back to 0 deg
 		expect(Math.abs(upsideDown.pairQuaternion.dot(ab.pairQuaternion))).toBeCloseTo(0, 4);
+	});
+
+	it('correctly evaluates all 4 real composite test images (AA, BB, CC, DD)', async () => {
+		const cases = [
+			{
+				name: 'seam-AA',
+				p1: { id: 'irlo1', position: new THREE.Vector3(-0.4997, -0.0001, -1.0716), quaternion: new THREE.Quaternion(-0.00038, -0.00109, 0.00019, 1.0), scale: 1.0 },
+				p2: { id: 'irlo2', position: new THREE.Vector3(0.5002, 0.0028, -1.0723), quaternion: new THREE.Quaternion(1e-05, -0.00048, 0.70719, 0.70702), scale: 1.0 },
+			},
+			{
+				name: 'seam-BB',
+				p1: { id: 'irlo1', position: new THREE.Vector3(-0.4998, 0.0025, -1.0723), quaternion: new THREE.Quaternion(0.00082, -0.00128, 0.70682, 0.7074), scale: 1.0 },
+				p2: { id: 'irlo2', position: new THREE.Vector3(0.4972, -0.0004, -1.0724), quaternion: new THREE.Quaternion(-0.0, -9e-05, -0.7072, 0.70701), scale: 1.0 },
+			},
+			{
+				name: 'seam-CC',
+				p1: { id: 'irlo1', position: new THREE.Vector3(-0.5029, -0.0001, -1.0726), quaternion: new THREE.Quaternion(-0.00096, -0.0, -0.70693, 0.70729), scale: 1.0 },
+				p2: { id: 'irlo2', position: new THREE.Vector3(0.4971, 0.003, -1.0722), quaternion: new THREE.Quaternion(-0.0, 0.00027, 1.0, 0.00025), scale: 1.0 },
+			},
+			{
+				name: 'seam-DD',
+				p1: { id: 'irlo1', position: new THREE.Vector3(-0.5032, 0.0029, -1.0727), quaternion: new THREE.Quaternion(0.0007, 0.00017, 1.0, -0.00012), scale: 1.0 },
+				p2: { id: 'irlo2', position: new THREE.Vector3(0.5003, -0.0003, -1.0727), quaternion: new THREE.Quaternion(-0.00014, -0.00067, -4e-05, 1.0), scale: 1.0 },
+			}
+		];
+
+		for (const tc of cases) {
+			const res = evaluatePairSeam(tc.p1, tc.p2, TEST_MANIFEST);
+			expect(res, `Result for ${tc.name} should not be null`).not.toBeNull();
+			expect(res!.isCompatible, `Seam ${tc.name} failure: ${res!.failureReasons.join(', ')}`).toBe(true);
+			expect(res!.arrangementKey).toBe(tc.name);
+		}
+
+		// Test with computeCanvasPoseFromCorners directly
+		const { computeCanvasPoseFromCorners } = await import('./poseProjection');
+		const p1Corners = [{ x: 0.0004, y: 0.0011 }, { x: 0.5002, y: -0.0007 }, { x: 0.5004, y: 1.0009 }, { x: 0.0002, y: 0.9999 }];
+		const p2Corners = [{ x: 0.5002, y: 0.9969 }, { x: 0.4999, y: -0.0028 }, { x: 1.0004, y: -0.003 }, { x: 1.0002, y: 0.9969 }];
+		const p1Pose: import('../types').Pose6DoF = {
+			position: [-0.4997, -0.0001, -1.0716],
+			quaternion: [-0.00038, -0.00109, 0.00019, 1.0],
+			normal: [-0.0022, 0.0008, 1.0]
+		};
+		const p2Pose: import('../types').Pose6DoF = {
+			position: [0.5002, 0.0028, -1.0723],
+			quaternion: [1e-05, -0.00048, 0.70719, 0.70702],
+			normal: [-0.0014, 0.0, 1.0]
+		};
+
+		const proj1 = computeCanvasPoseFromCorners('irlo1', p1Corners, 640, 360, 640, 360, p1Pose)!;
+		const proj2 = computeCanvasPoseFromCorners('irlo2', p2Corners, 640, 360, 640, 360, p2Pose)!;
+		expect(proj1).not.toBeNull();
+		expect(proj2).not.toBeNull();
+
+		console.log('proj1 screenPosition:', proj1.screenPosition, 'position:', proj1.position);
+		console.log('proj2 screenPosition:', proj2.screenPosition, 'position:', proj2.position);
+
+		// With proj1.position / proj2.position (backend solvePnP pose)
+		const resPos = evaluatePairSeam({ id: 'irlo1', position: proj1.position, quaternion: proj1.quaternion, scale: proj1.scale }, { id: 'irlo2', position: proj2.position, quaternion: proj2.quaternion, scale: proj2.scale }, TEST_MANIFEST);
+		expect(resPos?.isCompatible).toBe(true);
+
+		// With proj1.screenPosition / proj2.screenPosition
+		const resScreen = evaluatePairSeam({ id: 'irlo1', position: proj1.screenPosition, quaternion: proj1.quaternion, scale: proj1.scale }, { id: 'irlo2', position: proj2.screenPosition, quaternion: proj2.quaternion, scale: proj2.scale }, TEST_MANIFEST);
+		console.log('resScreen compatible:', resScreen?.isCompatible, 'reasons:', resScreen?.failureReasons);
+		expect(resScreen?.isCompatible).toBe(true);
+	});
+
+	it('determines facing edges directly from 2D corners for all 4 seam combinations', () => {
+		// Canonical unrotated unit quad centered at (0, 0): [TL(-0.5, -0.5), TR(0.5, -0.5), BR(0.5, 0.5), BL(-0.5, 0.5)]
+		const makeQuad = (cx: number, cy: number, rotDegCw: number) => {
+			const rad = (rotDegCw * Math.PI) / 180;
+			const cos = Math.cos(rad);
+			const sin = Math.sin(rad);
+			const base = [
+				{ x: -0.5, y: -0.5 },
+				{ x: 0.5, y: -0.5 },
+				{ x: 0.5, y: 0.5 },
+				{ x: -0.5, y: 0.5 }
+			];
+			return base.map((p) => ({
+				x: cx + p.x * cos - p.y * sin,
+				y: cy + p.x * sin + p.y * cos
+			}));
+		};
+
+		// 1. Seam AA: A at 90° CW on left, B at 270° CW on right
+		const quadA_AA = makeQuad(100, 200, 90);
+		const quadB_AA = makeQuad(210, 200, 270);
+		const facingAA = determineFacingSidesFromCorners(quadA_AA, quadB_AA);
+		expect(facingAA).toEqual({ sideA: 'top', sideB: 'top' });
+
+		// 2. Seam BB: A at 0° CW on left, B at 90° CW on right
+		const quadA_BB = makeQuad(100, 200, 0);
+		const quadB_BB = makeQuad(210, 200, 90);
+		const facingBB = determineFacingSidesFromCorners(quadA_BB, quadB_BB);
+		expect(facingBB).toEqual({ sideA: 'right', sideB: 'bottom' });
+
+		// 3. Seam CC: A at 180° CW on left, B at 180° CW on right
+		const quadA_CC = makeQuad(100, 200, 180);
+		const quadB_CC = makeQuad(210, 200, 180);
+		const facingCC = determineFacingSidesFromCorners(quadA_CC, quadB_CC);
+		expect(facingCC).toEqual({ sideA: 'left', sideB: 'right' });
+
+		// 4. Seam DD: A at 90° CW on right, B at 180° CW on left
+		const quadA_DD = makeQuad(210, 200, 90);
+		const quadB_DD = makeQuad(100, 200, 180);
+		const facingDD = determineFacingSidesFromCorners(quadA_DD, quadB_DD);
+		expect(facingDD).toEqual({ sideA: 'bottom', sideB: 'left' });
 	});
 });

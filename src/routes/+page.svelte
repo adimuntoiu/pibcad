@@ -259,8 +259,9 @@
 		return manifest ? (resolveCanvasConfig(manifest, rawId)?.id ?? rawId) : rawId;
 	}
 
-	scanner.onDetectionSample = (rawList, nowMs) => {
-		const targets = rawList.map((p) => {
+	scanner.onDetectionSample = (activeList, nowMs) => {
+		const paintingsToEval = scanner.paintings.length >= 2 ? scanner.paintings : activeList;
+		const targets = paintingsToEval.map((p) => {
 			const canonicalId = canonicalizeId(p.id);
 			if (manifest && !preloadedIds.has(canonicalId)) {
 				preloadedIds.add(canonicalId);
@@ -276,24 +277,30 @@
 		let stateKey: string | undefined;
 		let isCombined = false;
 
-		if (manifest && rawList.length >= 2 && videoWidth && videoHeight && boxWidth && boxHeight) {
+		const effectiveVW = videoWidth || video?.videoWidth || 640;
+		const effectiveVH = videoHeight || video?.videoHeight || 480;
+		const effectiveBW = boxWidth || effectiveVW;
+		const effectiveBH = boxHeight || effectiveVH;
+
+		if (manifest && paintingsToEval.length >= 2) {
 			const poseFrames: PaintingPoseFrame[] = [];
-			for (const p of rawList) {
+			for (const p of paintingsToEval) {
 				const proj = computeCanvasPoseFromCorners(
 					canonicalizeId(p.id),
 					p.corners,
-					videoWidth,
-					videoHeight,
-					boxWidth,
-					boxHeight,
+					effectiveVW,
+					effectiveVH,
+					effectiveBW,
+					effectiveBH,
 					p.pose
 				);
 				if (proj) {
 					poseFrames.push({
 						id: proj.id,
-						position: proj.position,
+						position: proj.screenPosition,
 						quaternion: proj.quaternion,
-						scale: proj.scale
+						scale: proj.scale,
+						corners: p.corners
 					});
 				}
 			}

@@ -261,7 +261,7 @@ export class PaintingScanner {
 			this.rawPaintings = freshDetections;
 			this.paintings = updated;
 			this.status = 'detected';
-			this.onDetectionSample?.(freshDetections, now);
+			this.onDetectionSample?.(this.paintings, now);
 			return;
 		}
 
@@ -270,6 +270,6 @@ export class PaintingScanner {
 		if (this.paintings.length === 0) {
 			this.status = 'scanning';
 		}
-		this.onDetectionSample?.([], now);
+		this.onDetectionSample?.(this.paintings, now);
 	}
 }

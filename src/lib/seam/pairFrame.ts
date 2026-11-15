@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Point } from '../types';
 import type { ArtManifest, CanvasConfig, EdgeLetter, SeamRule } from '../manifest/types';
 import { resolveCanvasConfig } from '../manifest/repository';
 
@@ -9,6 +10,7 @@ export interface PaintingPoseFrame {
 	position: THREE.Vector3;
 	quaternion: THREE.Quaternion;
 	scale: number; // canvas width at anchor depth
+	corners?: Point[];
 }
 
 export interface SeamEvaluationResult {
@@ -37,6 +39,92 @@ export interface SeamEvaluationResult {
 	pairScale: number;
 	seamLineStart: THREE.Vector3;
 	seamLineEnd: THREE.Vector3;
+}
+
+const EDGES: Array<{ side: EdgeSide; i0: number; i1: number }> = [
+	{ side: 'top', i0: 0, i1: 1 },
+	{ side: 'right', i0: 1, i1: 2 },
+	{ side: 'bottom', i0: 2, i1: 3 },
+	{ side: 'left', i0: 3, i1: 0 }
+];
+
+/**
+ * Determines which physical edges of Canvas A and Canvas B are facing each other
+ * based on canonical [TL, TR, BR, BL] 2D corners.
+ * This is 100% rotation-invariant and robust to 3D pitch/yaw noise from solvePnP.
+ */
+export function determineFacingSidesFromCorners(
+	cornersA: Point[],
+	cornersB: Point[]
+): { sideA: EdgeSide; sideB: EdgeSide } | null {
+	if (!cornersA || cornersA.length !== 4 || !cornersB || cornersB.length !== 4) {
+		return null;
+	}
+
+	const cAx = (cornersA[0].x + cornersA[1].x + cornersA[2].x + cornersA[3].x) * 0.25;
+	const cAy = (cornersA[0].y + cornersA[1].y + cornersA[2].y + cornersA[3].y) * 0.25;
+	const cBx = (cornersB[0].x + cornersB[1].x + cornersB[2].x + cornersB[3].x) * 0.25;
+	const cBy = (cornersB[0].y + cornersB[1].y + cornersB[2].y + cornersB[3].y) * 0.25;
+
+	const dABx = cBx - cAx;
+	const dABy = cBy - cAy;
+	const dBAx = -dABx;
+	const dBAy = -dABy;
+
+	let bestPair: { sideA: EdgeSide; sideB: EdgeSide; distSq: number } | null = null;
+
+	for (const eA of EDGES) {
+		const mAx = (cornersA[eA.i0].x + cornersA[eA.i1].x) * 0.5;
+		const mAy = (cornersA[eA.i0].y + cornersA[eA.i1].y) * 0.5;
+		const outAx = mAx - cAx;
+		const outAy = mAy - cAy;
+		const dotA = outAx * dABx + outAy * dABy;
+		if (dotA <= 0) continue;
+
+		for (const eB of EDGES) {
+			const mBx = (cornersB[eB.i0].x + cornersB[eB.i1].x) * 0.5;
+			const mBy = (cornersB[eB.i0].y + cornersB[eB.i1].y) * 0.5;
+			const outBx = mBx - cBx;
+			const outBy = mBy - cBy;
+			const dotB = outBx * dBAx + outBy * dBAy;
+			if (dotB <= 0) continue;
+
+			const distSq = (mAx - mBx) ** 2 + (mAy - mBy) ** 2;
+			if (!bestPair || distSq < bestPair.distSq) {
+				bestPair = { sideA: eA.side, sideB: eB.side, distSq };
+			}
+		}
+	}
+
+	if (bestPair) {
+		return { sideA: bestPair.sideA, sideB: bestPair.sideB };
+	}
+
+	let maxDotA = -Infinity;
+	let sideA: EdgeSide = 'right';
+	for (const eA of EDGES) {
+		const mAx = (cornersA[eA.i0].x + cornersA[eA.i1].x) * 0.5;
+		const mAy = (cornersA[eA.i0].y + cornersA[eA.i1].y) * 0.5;
+		const dot = (mAx - cAx) * dABx + (mAy - cAy) * dABy;
+		if (dot > maxDotA) {
+			maxDotA = dot;
+			sideA = eA.side;
+		}
+	}
+
+	let maxDotB = -Infinity;
+	let sideB: EdgeSide = 'left';
+	for (const eB of EDGES) {
+		const mBx = (cornersB[eB.i0].x + cornersB[eB.i1].x) * 0.5;
+		const mBy = (cornersB[eB.i0].y + cornersB[eB.i1].y) * 0.5;
+		const dot = (mBx - cBx) * dBAx + (mBy - cBy) * dBAy;
+		if (dot > maxDotB) {
+			maxDotB = dot;
+			sideB = eB.side;
+		}
+	}
+
+	return { sideA, sideB };
 }
 
 export function directionToEdgeSide(localDx: number, localDy: number): EdgeSide {
@@ -72,16 +160,39 @@ export function evaluatePairSeam(
 		.applyQuaternion(poseA.quaternion.clone().invert())
 		.divideScalar(avgScale);
 
-	const sideA = directionToEdgeSide(diffBinA.x, diffBinA.y);
-	const sideB = directionToEdgeSide(diffAinB.x, diffAinB.y);
+	let sideA: EdgeSide;
+	let sideB: EdgeSide;
+
+	if (
+		poseA.corners &&
+		poseA.corners.length === 4 &&
+		poseB.corners &&
+		poseB.corners.length === 4
+	) {
+		const facing = determineFacingSidesFromCorners(poseA.corners, poseB.corners);
+		if (facing) {
+			sideA = facing.sideA;
+			sideB = facing.sideB;
+		} else {
+			sideA = directionToEdgeSide(diffBinA.x, diffBinA.y);
+			sideB = directionToEdgeSide(diffAinB.x, diffAinB.y);
+		}
+	} else {
+		sideA = directionToEdgeSide(diffBinA.x, diffBinA.y);
+		sideB = directionToEdgeSide(diffAinB.x, diffAinB.y);
+	}
+
 	const edgeA = cfgA.edges[sideA];
 	const edgeB = cfgB.edges[sideB];
 	const pairCode = `${edgeA}${edgeB}`;
 
-	const domDistA = Math.max(Math.abs(diffBinA.x), Math.abs(diffBinA.y));
-	const latDistA = Math.min(Math.abs(diffBinA.x), Math.abs(diffBinA.y));
-	const domDistB = Math.max(Math.abs(diffAinB.x), Math.abs(diffAinB.y));
-	const latDistB = Math.min(Math.abs(diffAinB.x), Math.abs(diffAinB.y));
+	const isHorizontalA = sideA === 'right' || sideA === 'left';
+	const domDistA = isHorizontalA ? Math.abs(diffBinA.x) : Math.abs(diffBinA.y);
+	const latDistA = isHorizontalA ? Math.abs(diffBinA.y) : Math.abs(diffBinA.x);
+
+	const isHorizontalB = sideB === 'right' || sideB === 'left';
+	const domDistB = isHorizontalB ? Math.abs(diffAinB.x) : Math.abs(diffAinB.y);
+	const latDistB = isHorizontalB ? Math.abs(diffAinB.y) : Math.abs(diffAinB.x);
 
 	const gapRatioA = domDistA - 1.0;
 	const gapRatioB = domDistB - 1.0;
@@ -95,14 +206,15 @@ export function evaluatePairSeam(
 	const normalAngleDeg = (Math.acos(dotN) * 180) / Math.PI;
 
 	const tol = manifest.tolerances;
+	const maxOutOfPlaneRatio = tol.maxOutOfPlaneRatio ?? 0.35;
 	const withinGap =
-		domDistA >= 0.75 &&
+		domDistA >= 0.65 &&
 		domDistA <= 1.0 + tol.maxGapRatio &&
-		domDistB >= 0.75 &&
+		domDistB >= 0.65 &&
 		domDistB <= 1.0 + tol.maxGapRatio;
 	const withinLateral =
 		latDistA <= tol.maxLateralOffsetRatio && latDistB <= tol.maxLateralOffsetRatio;
-	const isCoplanar = normalAngleDeg <= tol.maxNormalAngleDeg && outOfPlaneRatio <= 0.35;
+	const isCoplanar = normalAngleDeg <= tol.maxNormalAngleDeg && outOfPlaneRatio <= maxOutOfPlaneRatio;
 
 	const matchedRule =
 		manifest.seamRules.find(
@@ -127,8 +239,8 @@ export function evaluatePairSeam(
 	}
 	if (!withinGap) {
 		const minDom = Math.min(domDistA, domDistB);
-		if (minDom < 0.75) {
-			failureReasons.push(`overlap (dist ${minDom.toFixed(2)} < 0.75)`);
+		if (minDom < 0.65) {
+			failureReasons.push(`overlap (dist ${minDom.toFixed(2)} < 0.65)`);
 		} else {
 			failureReasons.push(
 				`gap ${(gapRatio * 100).toFixed(1)}% > ${(tol.maxGapRatio * 100).toFixed(1)}%`
@@ -146,8 +258,10 @@ export function evaluatePairSeam(
 				`angle ${normalAngleDeg.toFixed(1)}° > ${tol.maxNormalAngleDeg.toFixed(1)}°`
 			);
 		}
-		if (outOfPlaneRatio > 0.35) {
-			failureReasons.push(`out-of-plane ${(outOfPlaneRatio * 100).toFixed(1)}% > 35.0%`);
+		if (outOfPlaneRatio > maxOutOfPlaneRatio) {
+			failureReasons.push(
+				`out-of-plane ${(outOfPlaneRatio * 100).toFixed(1)}% > ${(maxOutOfPlaneRatio * 100).toFixed(1)}%`
+			);
 		}
 	}
 

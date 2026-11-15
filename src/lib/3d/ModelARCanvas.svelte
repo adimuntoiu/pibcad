@@ -815,6 +815,7 @@
 		let diagLastReport = 0;
 		let wasShowingLiveCombined = false;
 		let singlesWereVisible = false;
+		let lastValidSeam: SeamEvaluationResult | null = null;
 
 		const toSeamDiag = (res: SeamEvaluationResult): SeamDiagnostics => ({
 			canvasAId: res.canvasA.id,
@@ -872,9 +873,10 @@
 
 					projectedPoses.push({
 						id: t.canonicalId,
-						position: projected.position.clone(),
+						position: projected.screenPosition.clone(),
 						quaternion: projected.quaternion.clone(),
-						scale: projected.scale
+						scale: projected.scale,
+						corners: t.corners
 					});
 
 					planeMap[t.canonicalId] = {
@@ -906,16 +908,23 @@
 			const meshAlpha = isTrackingModel ? (calibrationMode ? calibrationOpacity : crossFadeAlpha) : 0;
 			const holoAlpha = isGenerating ? 1 : isTrackingModel && !calibrationMode ? 1 - crossFadeAlpha : 0;
 
+			if (activeSeam?.rule && activeSeam.isCompatible) {
+				lastValidSeam = activeSeam;
+			}
+
 			if (calibrationMode || arState === 'scanning') {
 				wasShowingLiveCombined = false;
 				singlesWereVisible = false;
+				lastValidSeam = null;
 			}
+
+			const liveSeam = activeSeam?.rule ? activeSeam : lastValidSeam;
 
 			// Determine if a live or calibrated pair seam owns rendering
 			const showLiveCombined =
 				!calibrationMode &&
 				arState === 'tracking_combined' &&
-				Boolean(activeSeam?.isCompatible && activeSeam.rule);
+				Boolean(liveSeam && liveSeam.rule);
 			const showCalSeam = calInfo?.kind === 'seam';
 			const fadingOutSinglesToCombined =
 				showLiveCombined && singlesWereVisible && crossFadeAlpha < 0.99;
@@ -936,12 +945,12 @@
 			}
 
 			const seamPairedIds = new Set<string>();
-			if (showLiveCombined && activeSeam) {
-				seamPairedIds.add(activeSeam.canvasA.id);
-				seamPairedIds.add(activeSeam.canvasB.id);
+			if (showLiveCombined && liveSeam) {
+				seamPairedIds.add(liveSeam.canvasA.id);
+				seamPairedIds.add(liveSeam.canvasB.id);
 			}
 
-			if (showLiveCombined && activeSeam?.rule) {
+			if (showLiveCombined && liveSeam?.rule) {
 				if (!pairInstance && scene) {
 					pairInstance = createPaintingInstance('pair_seam');
 					pairExtraGuides = createPairExtraGuides();
@@ -950,9 +959,9 @@
 				if (pairInstance) {
 					void ensureInstanceModel(
 						pairInstance,
-						activeSeam.rule.id,
-						activeSeam.rule.combinedModel.url,
-						activeSeam.rule.combinedModel,
+						liveSeam.rule.id,
+						liveSeam.rule.combinedModel.url,
+						liveSeam.rule.combinedModel,
 						false
 					);
 				}
@@ -1063,26 +1072,26 @@
 					pairInstance.canvasGuide.visible = false;
 
 					const useLiveSeam =
-						activeSeam &&
+						liveSeam &&
 						(showLiveCombined ||
 							fadingOutCombinedToSingles ||
 							(showCalSeam && projectedPoses.length >= 2));
 
-					if (useLiveSeam && activeSeam) {
+					if (useLiveSeam && liveSeam) {
 						const quatDot = Math.abs(
-							pairInstance.root.quaternion.dot(activeSeam.pairQuaternion)
+							pairInstance.root.quaternion.dot(liveSeam.pairQuaternion)
 						);
 						if (!wasPairVisible || quatDot < 0.85) {
-							pairInstance.root.position.copy(activeSeam.pairOrigin);
-							pairInstance.root.quaternion.copy(activeSeam.pairQuaternion);
-							pairInstance.root.scale.setScalar(activeSeam.pairScale);
+							pairInstance.root.position.copy(liveSeam.pairOrigin);
+							pairInstance.root.quaternion.copy(liveSeam.pairQuaternion);
+							pairInstance.root.scale.setScalar(liveSeam.pairScale);
 						} else {
-							pairInstance.root.position.lerp(activeSeam.pairOrigin, 0.45);
-							pairInstance.root.quaternion.slerp(activeSeam.pairQuaternion, 0.45);
+							pairInstance.root.position.lerp(liveSeam.pairOrigin, 0.45);
+							pairInstance.root.quaternion.slerp(liveSeam.pairQuaternion, 0.45);
 							const curS = pairInstance.root.scale.x;
-							pairInstance.root.scale.setScalar(curS + (activeSeam.pairScale - curS) * 0.45);
+							pairInstance.root.scale.setScalar(curS + (liveSeam.pairScale - curS) * 0.45);
 						}
-						updatePairGuidesFromSeam(activeSeam);
+						updatePairGuidesFromSeam(liveSeam);
 					} else {
 						pairInstance.root.position.copy(PREVIEW_POSE);
 						pairInstance.root.quaternion.identity();

@@ -24,22 +24,15 @@
 	}
 
 	function setPreset(kind: 'AA' | 'BB' | 'CC' | 'DD') {
+		isSwapped = false;
 		if (kind === 'AA') {
-			isSwapped = false;
-			rotations.arlo1 = 90;
-			rotations.arlo2 = 270;
-			rotations['arlo1'] = 90;
-			rotations['arlo2'] = 270;
-			rotations = { irlo1: 90, irlo2: 270 };
+			rotations = { irlo1: 0, irlo2: 270 };
 		} else if (kind === 'BB') {
-			isSwapped = false;
-			rotations = { irlo1: 0, irlo2: 90 };
+			rotations = { irlo1: 270, irlo2: 90 };
 		} else if (kind === 'CC') {
-			isSwapped = true;
-			rotations = { irlo1: 0, irlo2: 0 };
-		} else if (kind === 'DD') {
-			isSwapped = true;
 			rotations = { irlo1: 90, irlo2: 180 };
+		} else if (kind === 'DD') {
+			rotations = { irlo1: 180, irlo2: 0 };
 		}
 	}
 
@@ -134,28 +127,28 @@
 							onclick={() => setPreset('AA')}
 							class="rounded-lg border border-emerald-500/40 bg-emerald-950/60 px-2.5 py-1 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60"
 						>
-							Set AA (irlo1 90° / irlo2 270°)
+							Set AA (irlo1 0° / irlo2 270°)
 						</button>
 						<button
 							type="button"
 							onclick={() => setPreset('BB')}
 							class="rounded-lg border border-emerald-500/40 bg-emerald-950/60 px-2.5 py-1 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60"
 						>
-							Set BB (irlo1 0° / irlo2 90°)
+							Set BB (irlo1 270° / irlo2 90°)
 						</button>
 						<button
 							type="button"
 							onclick={() => setPreset('CC')}
 							class="rounded-lg border border-emerald-500/40 bg-emerald-950/60 px-2.5 py-1 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60"
 						>
-							Set CC (irlo2 0° / irlo1 0°)
+							Set CC (irlo1 90° / irlo2 180°)
 						</button>
 						<button
 							type="button"
 							onclick={() => setPreset('DD')}
 							class="rounded-lg border border-emerald-500/40 bg-emerald-950/60 px-2.5 py-1 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60"
 						>
-							Set DD (irlo2 180° / irlo1 90°)
+							Set DD (irlo1 180° / irlo2 0°)
 						</button>
 						<button
 							type="button"

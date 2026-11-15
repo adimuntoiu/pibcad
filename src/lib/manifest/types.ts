@@ -71,6 +71,7 @@ export interface SeamTolerances {
 	maxGapRatio: number;
 	maxLateralOffsetRatio: number;
 	maxNormalAngleDeg: number;
+	maxOutOfPlaneRatio?: number;
 }
 
 export interface AnimationConfig {
