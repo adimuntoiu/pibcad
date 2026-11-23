@@ -47,5 +47,12 @@
     "artist": "IRLO",
     "image": "irloAbstract2.jpeg",
     "model_path": "/demo/models/irloAbstract2.glb"
+  },
+  {
+    "id": "art-1794752687991-0",
+    "title": "ygygy",
+    "artist": "Dragos",
+    "image": "art-1794752687991-0.png",
+    "model_path": "/demo/models/default.glb"
   }
 ]

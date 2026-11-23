@@ -25,24 +25,26 @@
       "edges": {
         "top": "C",
         "right": "A",
+        "top": "A",
+        "right": "D",
         "bottom": "B",
-        "left": "D"
+        "left": "D""left": "C"
       },
       "singleModel": {
         "url": "/demo/models/irlo1_single.glb",
         "mode": "overlay",
-        "scale": 1,
+        "scale": 1.15,
         "fitDimension": "width",
         "fitFraction": 1,
         "offset": [
           0,
-          0,
+          0.015,
           0
         ],
         "rotation": [
           0,
           0,
-          0
+          90
         ],
         "axisConvention": "yUp",
         "flip": [

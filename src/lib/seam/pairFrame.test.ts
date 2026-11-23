@@ -16,7 +16,7 @@ const TEST_MANIFEST: ArtManifest = {
 			id: 'irlo1',
 			name: 'IRLO I',
 			imageTargetUrl: '/demo/irlo1.jpg',
-			edges: { top: 'C', right: 'A', bottom: 'B', left: 'D' },
+			edges: { top: 'A', right: 'D', bottom: 'B', left: 'C' },
 			singleModel: { url: '/demo/models/irlo1_single.glb' }
 		},
 		{
@@ -30,7 +30,7 @@ const TEST_MANIFEST: ArtManifest = {
 			id: 'irlo3',
 			name: 'IRLO III (Tile)',
 			imageTargetUrl: '/demo/irlo1.jpg',
-			edges: { top: 'C', right: 'A', bottom: 'B', left: 'D' },
+			edges: { top: 'A', right: 'D', bottom: 'B', left: 'C' },
 			singleModel: { url: '/demo/models/irlo1_single.glb' }
 		}
 	],
@@ -90,10 +90,10 @@ function cwRotQuat(deg: number): THREE.Quaternion {
 describe('evaluatePairSeam', () => {
 	it('evaluates all 16 orientation combinations (4 valid, 12 invalid) accurately', () => {
 		const validExpected = new Map<string, { edge: string; key: string }>([
-			['0,270', { edge: 'A', key: 'seam-AA' }],
+			['90,270', { edge: 'A', key: 'seam-AA' }],
 			['270,90', { edge: 'B', key: 'seam-BB' }],
-			['90,180', { edge: 'C', key: 'seam-CC' }],
-			['180,0', { edge: 'D', key: 'seam-DD' }]
+			['180,180', { edge: 'C', key: 'seam-CC' }],
+			['0,0', { edge: 'D', key: 'seam-DD' }]
 		]);
 
 		let validCount = 0;
@@ -148,10 +148,10 @@ describe('evaluatePairSeam', () => {
 	});
 
 	it('is invariant to global orientation (vertical stack & 37° diagonal wall angle)', () => {
-		// Base AA pair: irlo1 (-0.55, 0) at 0° CW, irlo2 (+0.55, 0) at 270° CW
+		// Base AA pair: irlo1 (-0.55, 0) at 90° CW, irlo2 (+0.55, 0) at 270° CW
 		const basePosA = new THREE.Vector3(-0.55, 0, 0);
 		const basePosB = new THREE.Vector3(0.55, 0, 0);
-		const baseQuatA = cwRotQuat(0);
+		const baseQuatA = cwRotQuat(90);
 		const baseQuatB = cwRotQuat(270);
 
 		for (const worldAngleDeg of [90, 37, -142]) {
@@ -189,7 +189,7 @@ describe('evaluatePairSeam', () => {
 				{
 					id: 'irlo1',
 					position: new THREE.Vector3(-halfCenterDist, 0, -2),
-					quaternion: cwRotQuat(0),
+					quaternion: cwRotQuat(90),
 					scale: 1.0
 				},
 				{
@@ -228,7 +228,7 @@ describe('evaluatePairSeam', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, -0.09, -2),
-				quaternion: cwRotQuat(0),
+				quaternion: cwRotQuat(90),
 				scale: 1.0
 			},
 			{
@@ -247,7 +247,7 @@ describe('evaluatePairSeam', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, -0.21, -2),
-				quaternion: cwRotQuat(0),
+				quaternion: cwRotQuat(90),
 				scale: 1.0
 			},
 			{
@@ -262,18 +262,18 @@ describe('evaluatePairSeam', () => {
 		expect(excessLat.withinLateral).toBe(false);
 		expect(excessLat.isCompatible).toBe(false);
 
-		// Asymmetric skew: A is aligned (0°), B is rotated 210° (30° past 180° BB) -> latDistB = 0.55 > 0.35
+		// Asymmetric skew: A is aligned (90°), B is rotated 300° (30° past 270° AA) -> latDistB = 0.55 > 0.35
 		const skewed = evaluatePairSeam(
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(0, 0, -2),
-				quaternion: cwRotQuat(0),
+				quaternion: cwRotQuat(90),
 				scale: 1.0
 			},
 			{
 				id: 'irlo2',
 				position: new THREE.Vector3(1.1, 0, -2),
-				quaternion: cwRotQuat(210),
+				quaternion: cwRotQuat(300),
 				scale: 1.0
 			},
 			TEST_MANIFEST
@@ -291,7 +291,7 @@ describe('evaluatePairSeam', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, 0, -2),
-				quaternion: cwRotQuat(0),
+				quaternion: cwRotQuat(90),
 				scale: 1.0
 			},
 			{
@@ -313,7 +313,7 @@ describe('evaluatePairSeam', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, 0, -2),
-				quaternion: cwRotQuat(0),
+				quaternion: cwRotQuat(90),
 				scale: 1.0
 			},
 			{
@@ -332,7 +332,7 @@ describe('evaluatePairSeam', () => {
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, 0, -2),
-				quaternion: cwRotQuat(0),
+				quaternion: cwRotQuat(90),
 				scale: 1.0
 			},
 			{
@@ -355,13 +355,13 @@ describe('evaluateAllPairSeams', () => {
 			{
 				id: 'irlo3',
 				position: new THREE.Vector3(-1.7, 0, -2),
-				quaternion: cwRotQuat(0),
+				quaternion: cwRotQuat(90),
 				scale: 1.0
 			},
 			{
 				id: 'irlo1',
 				position: new THREE.Vector3(-0.54, 0, -2),
-				quaternion: cwRotQuat(0),
+				quaternion: cwRotQuat(90),
 				scale: 1.0
 			},
 			{
@@ -379,6 +379,21 @@ describe('evaluateAllPairSeams', () => {
 		expect(all[1].isCompatible).toBe(false);
 		expect(all[2].isCompatible).toBe(false);
 	});
+
+const COMPOSITE_FIXTURES_MANIFEST: ArtManifest = {
+	...TEST_MANIFEST,
+	canvases: [
+		{
+			id: 'irlo1',
+			name: 'IRLO I',
+			imageTargetUrl: '/demo/irlo1.jpg',
+			edges: { top: 'C', right: 'A', bottom: 'B', left: 'D' },
+			singleModel: { url: '/demo/models/irlo1_single.glb' }
+		},
+		TEST_MANIFEST.canvases[1],
+		TEST_MANIFEST.canvases[2]
+	]
+};
 
 	it('verifies all 4 composite paintings (AA, BB, CC, DD) in both normal and mirrored modes', async () => {
 		const { computeCanvasPoseFromCorners } = await import('./poseProjection');
@@ -569,7 +584,7 @@ const COMPOSITE_DETECTIONS: Record<string, CompositeDetectionCase> = {
 				};
 			});
 
-			const res = evaluatePairSeam(poses[0], poses[1], TEST_MANIFEST);
+			const res = evaluatePairSeam(poses[0], poses[1], COMPOSITE_FIXTURES_MANIFEST);
 			expect(res).not.toBeNull();
 			expect(res!.isCompatible).toBe(true);
 			const normalizedCode = res!.pairCode === 'BA' ? 'AB' : res!.pairCode;
@@ -579,11 +594,11 @@ const COMPOSITE_DETECTIONS: Record<string, CompositeDetectionCase> = {
 	});
 
 	it('produces identical pairQuaternion regardless of input order and rotates 180 deg with upside-down paintings', () => {
-		// Seam AA: canonical left = irlo1 (0 deg CW), canonical right = irlo2 (270 deg CW)
+		// Seam AA: canonical left = irlo1 (90 deg CW), canonical right = irlo2 (270 deg CW)
 		const pose1: PaintingPoseFrame = {
 			id: 'irlo1',
 			position: new THREE.Vector3(-0.54, 0, -2),
-			quaternion: cwRotQuat(0),
+			quaternion: cwRotQuat(90),
 			scale: 1.0
 		};
 		const pose2: PaintingPoseFrame = {
@@ -600,7 +615,7 @@ const COMPOSITE_DETECTIONS: Record<string, CompositeDetectionCase> = {
 		expect(ab.pairOrigin.distanceTo(ba.pairOrigin)).toBeLessThan(1e-5);
 		expect(Math.abs(ab.pairQuaternion.dot(ba.pairQuaternion))).toBeCloseTo(1, 5);
 
-		// Also verify swapped-seam order invariance (CC upright: canonical left = irlo2 @ 0 deg, right = irlo1 @ 270 deg)
+		// Also verify swapped-seam order invariance (CC upright: canonical left = irlo2 @ 0 deg, right = irlo1 @ 0 deg)
 		const cc2: PaintingPoseFrame = {
 			id: 'irlo2',
 			position: new THREE.Vector3(-0.54, 0, -2),
@@ -610,7 +625,7 @@ const COMPOSITE_DETECTIONS: Record<string, CompositeDetectionCase> = {
 		const cc1: PaintingPoseFrame = {
 			id: 'irlo1',
 			position: new THREE.Vector3(0.54, 0, -2),
-			quaternion: cwRotQuat(270),
+			quaternion: cwRotQuat(0),
 			scale: 1.0
 		};
 		const ccForward = evaluatePairSeam(cc1, cc2, TEST_MANIFEST)!;
@@ -665,7 +680,7 @@ const COMPOSITE_DETECTIONS: Record<string, CompositeDetectionCase> = {
 		];
 
 		for (const tc of cases) {
-			const res = evaluatePairSeam(tc.p1, tc.p2, TEST_MANIFEST);
+			const res = evaluatePairSeam(tc.p1, tc.p2, COMPOSITE_FIXTURES_MANIFEST);
 			expect(res, `Result for ${tc.name} should not be null`).not.toBeNull();
 			expect(res!.isCompatible, `Seam ${tc.name} failure: ${res!.failureReasons.join(', ')}`).toBe(true);
 			expect(res!.arrangementKey).toBe(tc.name);
@@ -695,11 +710,11 @@ const COMPOSITE_DETECTIONS: Record<string, CompositeDetectionCase> = {
 		console.log('proj2 screenPosition:', proj2.screenPosition, 'position:', proj2.position);
 
 		// With proj1.position / proj2.position (backend solvePnP pose)
-		const resPos = evaluatePairSeam({ id: 'irlo1', position: proj1.position, quaternion: proj1.quaternion, scale: proj1.scale }, { id: 'irlo2', position: proj2.position, quaternion: proj2.quaternion, scale: proj2.scale }, TEST_MANIFEST);
+		const resPos = evaluatePairSeam({ id: 'irlo1', position: proj1.position, quaternion: proj1.quaternion, scale: proj1.scale }, { id: 'irlo2', position: proj2.position, quaternion: proj2.quaternion, scale: proj2.scale }, COMPOSITE_FIXTURES_MANIFEST);
 		expect(resPos?.isCompatible).toBe(true);
 
 		// With proj1.screenPosition / proj2.screenPosition
-		const resScreen = evaluatePairSeam({ id: 'irlo1', position: proj1.screenPosition, quaternion: proj1.quaternion, scale: proj1.scale }, { id: 'irlo2', position: proj2.screenPosition, quaternion: proj2.quaternion, scale: proj2.scale }, TEST_MANIFEST);
+		const resScreen = evaluatePairSeam({ id: 'irlo1', position: proj1.screenPosition, quaternion: proj1.quaternion, scale: proj1.scale }, { id: 'irlo2', position: proj2.screenPosition, quaternion: proj2.quaternion, scale: proj2.scale }, COMPOSITE_FIXTURES_MANIFEST);
 		console.log('resScreen compatible:', resScreen?.isCompatible, 'reasons:', resScreen?.failureReasons);
 		expect(resScreen?.isCompatible).toBe(true);
 	});
